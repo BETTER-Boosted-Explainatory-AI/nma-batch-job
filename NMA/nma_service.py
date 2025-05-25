@@ -1,19 +1,16 @@
 from utilss.enums.graph_types import GraphTypes
 from utilss.enums.datasets import DatasetsEnum
+from classes.dendrogram import Dendrogram
+from classes.edges_dataframe import EdgesDataframe
 from classes.nma import NMA
 
 def _create_nma(model_file, graph_type, dataset_str, user, min_confidence, top_k, model_id_md):
-    # if model_file is None:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-    #         detail="Model file is required"
-    #     )
+    if model_file is None:
+        raise ValueError("Model file cannot be None")
         
     if graph_type != GraphTypes.SIMILARITY.value and graph_type != GraphTypes.DISSIMILARITY.value and graph_type != GraphTypes.COUNT.value:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-            detail="Graph type must be either 'similarity' or 'dissimilarity'"
-        )
+        raise ValueError("Graph type must be either 'similarity', 'dissimilarity', or 'count'")
+
     
     dataset_config = _get_dataset_config(dataset_str)
     dataset = _load_dataset(dataset_config)
@@ -22,10 +19,7 @@ def _create_nma(model_file, graph_type, dataset_str, user, min_confidence, top_k
         loaded_model = _load_model(dataset_str, model_file.name, dataset_config)
         model_directory = _get_model_path(user.user_id, loaded_model.model_path)
         if model_directory is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                detail="Could not find model directory"
-            )
+            raise ValueError("Model directory cannot be None")
             
         dataframe_filename = f'{model_directory}/{graph_type}/edges_df.csv'
         dendrogram_filename = f'{model_directory}/{graph_type}/dendrogram'
@@ -67,4 +61,4 @@ def _create_nma(model_file, graph_type, dataset_str, user, min_confidence, top_k
         return init_sub_z
     
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise RuntimeError(f"Error during NMA creation: {str(e)}")
