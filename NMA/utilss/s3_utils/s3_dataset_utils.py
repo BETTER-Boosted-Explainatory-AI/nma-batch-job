@@ -1,7 +1,7 @@
 import os
 from typing import Dict, List, Tuple, Any
 import numpy as np
-from utilss.s3_utils.s3_dataset_loader import S3DatasetLoader
+from NMA.utilss.s3_utils.s3_dataset_loader import S3DatasetLoader
 import boto3, io, pickle, logging
 
 log = logging.getLogger(__name__)

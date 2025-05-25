@@ -1,3 +1,4 @@
 .env
 /venv
 testing_shit.py
+*.pyc

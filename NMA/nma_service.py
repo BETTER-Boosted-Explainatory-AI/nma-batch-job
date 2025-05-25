@@ -1,8 +1,10 @@
-from utilss.enums.graph_types import GraphTypes
-from utilss.enums.datasets import DatasetsEnum
-from classes.dendrogram import Dendrogram
-from classes.edges_dataframe import EdgesDataframe
-from classes.nma import NMA
+from NMA.utilss.enums.graph_types import GraphTypes
+from NMA.utilss.enums.datasets import DatasetsEnum
+from NMA.classes.dendrogram import Dendrogram
+from NMA.classes.edges_dataframe import EdgesDataframe
+from NMA.classes.nma import NMA
+from NMA.dataset_service import _get_dataset_config, _load_dataset
+from NMA.model_service import _get_model_path, _load_model
 
 def _create_nma(model_file, graph_type, dataset_str, user, min_confidence, top_k, model_id_md):
     if model_file is None:

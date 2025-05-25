@@ -1,7 +1,7 @@
 import os
 from typing import Dict, List, Any
 import numpy as np
-from utilss.s3_utils.s3_handler import S3Handler
+from NMA.utilss.s3_utils.s3_handler import S3Handler
 
 class S3ImagenetLoader:
     def __init__(self, s3_handler=None, bucket_name=None):

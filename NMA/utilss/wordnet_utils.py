@@ -1,7 +1,6 @@
 from nltk.corpus import wordnet as wn
 import os
 
-
 def convert_folder_names_to_readable_labels(dataset_path):
     if not os.path.exists(dataset_path):
         raise ValueError(f"Dataset path does not exist: {dataset_path}")

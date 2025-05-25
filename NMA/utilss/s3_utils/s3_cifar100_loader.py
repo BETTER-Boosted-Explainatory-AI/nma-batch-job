@@ -1,7 +1,7 @@
 import os
 from typing import Dict, Tuple, List
 import numpy as np
-from utilss.s3_utils.s3_handler import S3Handler
+from NMA.utilss.s3_utils.s3_handler import S3Handler
 
 class S3CifarLoader:
     """Class for loading CIFAR-specific datasets from S3."""
