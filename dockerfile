@@ -1,0 +1,32 @@
+FROM tensorflow/tensorflow:2.12.0-gpu
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    build-essential \
+    libxml2-dev \
+    libcairo2-dev \
+    pkg-config \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file
+COPY requierments.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requierments.txt
+
+# Copy your application code
+COPY . /app
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Default command (will be overridden by AWS Batch)
+CMD ["python", "-m", "nma_batch_processor"]
