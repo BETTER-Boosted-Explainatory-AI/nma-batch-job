@@ -1,12 +1,12 @@
 import os
 from typing import Dict, List, Any
 import numpy as np
-from NMA.utilss.s3_utils.s3_handler import S3Handler
+from utilss.s3_connector.s3_handler import S3Handler
 
 class S3ImagenetLoader:
     def __init__(self, s3_handler=None, bucket_name=None):
         """Initialize with an S3 handler."""
-        self.bucket_name = bucket_name or os.environ.get('S3_DATASET_BUCKET_NAME')
+        self.bucket_name = bucket_name or os.environ.get('S3_BUCKET_NAME')
         if not self.bucket_name:
             raise ValueError("S3 bucket name not specified")
             

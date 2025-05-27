@@ -1,8 +1,8 @@
 import os
 from typing import Dict, Any, List, Tuple
 import numpy as np
-from NMA.classes.datasets.dataset_factory import DatasetFactory
-from NMA.utilss.s3_utils.s3_dataset_loader import S3DatasetLoader
+from classes.datasets.dataset_factory import DatasetFactory
+from s3_connector.s3_dataset_loader import S3DatasetLoader
 
 def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     """Get dataset configuration based on dataset string from S3."""
@@ -14,13 +14,15 @@ def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     
     return s3_loader.get_dataset_info(dataset_str)
 
+
+
 def _load_dataset(dataset_str: str):
     """
     Return a Dataset object populated directly from S3.
     """
     dataset_config = _get_dataset_config(dataset_str)
 
-    dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
+    dataset_name = dataset_config["dataset"]    
     dataset = DatasetFactory.create_dataset(dataset_name)
     # (dataset_name)                     
     return dataset
