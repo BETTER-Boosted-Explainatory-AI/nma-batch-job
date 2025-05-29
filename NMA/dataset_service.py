@@ -15,31 +15,43 @@ def _get_dataset_config(dataset_str: str) -> Dict[str, Any]:
     return s3_loader.get_dataset_info(dataset_str)
 
 
-def _load_dataset(dataset_str: str):
-    """Load the dataset from S3."""
-    bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
-    if not bucket_name:
-        raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
+# def _load_dataset(dataset_str: str):
+#     """Load the dataset from S3."""
+#     bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
+#     if not bucket_name:
+#         raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
-    s3_loader = S3DatasetLoader(bucket_name=bucket_name)
+#     # s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     
-    dataset_config = _get_dataset_config(dataset_str)
+#     dataset_config = _get_dataset_config(dataset_str)
     
-    temp_dir = s3_loader.load(dataset_str)
-    if not temp_dir:
-        raise ValueError(f"Failed to load dataset folder for {dataset_str}")
+#     # temp_dir = s3_loader.load(dataset_str)
+#     # if not temp_dir:
+#     #     raise ValueError(f"Failed to load dataset folder for {dataset_str}")
     
-    try:
-        dataset_name = dataset_config["dataset"]
-        dataset = DatasetFactory.create_dataset(dataset_name)
+#     # try:
+#     dataset_name = dataset_config["dataset"]
+#     dataset = DatasetFactory.create_dataset(dataset_name)
         
-        dataset.load(dataset_name)
-    finally:
-        # Clean up
-        shutil.rmtree(temp_dir)
+        
+#     # dataset.load(dataset_name)
+#     # finally:
+#     #     # Clean up
+#     #     shutil.rmtree(temp_dir)
     
-    return temp_dir
+#     return dataset
 
+def _load_dataset(dataset_str: str):
+    """
+    Return a Dataset object populated directly from S3.
+    """
+    dataset_config = _get_dataset_config(dataset_str)
+
+    dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
+    dataset = DatasetFactory.create_dataset(dataset_name)
+    dataset.load(dataset_name)       
+
+    return dataset
 
 # def _load_dataset(dataset_str: str):
 #     """
