@@ -214,7 +214,7 @@
 
 
 import tensorflow as tf
-from keras.applications.resnet50 import preprocess_input, decode_predictions
+from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 from sklearn.metrics import f1_score
 import numpy as np
 import os
@@ -229,7 +229,7 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 import tempfile
-from utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
+from NMA.utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
 import io 
 
 logger = logging.getLogger(__name__)

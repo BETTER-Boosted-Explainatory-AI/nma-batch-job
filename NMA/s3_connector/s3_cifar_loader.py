@@ -1,14 +1,14 @@
 import os
 from typing import Dict, Tuple, List, Any
 import numpy as np
-from utilss.s3_connector.s3_handler import S3Handler
+from NMA.s3_connector.s3_handler import S3Handler
 
 class S3CifarLoader:
     """Class for loading CIFAR-specific datasets from S3."""
     
     def __init__(self, s3_handler=None, bucket_name=None):
         """Initialize with an S3 handler."""
-        self.bucket_name = bucket_name or os.environ.get('S3_BUCKET_NAME')
+        self.bucket_name = bucket_name or os.environ.get('S3_DATASETS_BUCKET_NAME')
         if not self.bucket_name:
             raise ValueError("S3 bucket name not specified")
             

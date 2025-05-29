@@ -1,8 +1,8 @@
 import numpy as np
 import json
 import os
-from tree_node import TreeNode
-from utilss.enums.heap_types import HeapType
+from .tree_node import TreeNode
+from NMA.utilss.enums.heap_types import HeapType
 
 class HierarchicalClusteringBuilder:
     def __init__(self, heap_processor, labels):

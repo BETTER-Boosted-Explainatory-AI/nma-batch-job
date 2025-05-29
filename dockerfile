@@ -1,8 +1,6 @@
 FROM tensorflow/tensorflow:2.12.0-gpu
-
 # Set working directory
 WORKDIR /app
-
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
@@ -14,19 +12,17 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     && rm -rf /var/lib/apt/lists/*
-
 # Copy requirements file
-COPY requierments.txt .
-
+COPY requirements.txt .
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requierments.txt
-
+RUN pip install --no-cache-dir -r requirements.txt
+# Install FastAPI directly (if not in requirements)
+# RUN pip install --no-cache-dir fastapi
 # Copy your application code
 COPY . /app
-
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app
 # Default command (will be overridden by AWS Batch)
-CMD ["python", "-m", "nma_batch_processor"]
+CMD ["python", "main.py"]

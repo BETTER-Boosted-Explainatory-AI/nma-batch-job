@@ -30,9 +30,9 @@
 #         self.log = logging.getLogger(__name__)
 
 #     def load(self, name):                         
-#         bucket = os.getenv("S3_DATASET_BUCKET_NAME")
+#         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
 #         if not bucket:
-#             raise RuntimeError("S3_DATASET_BUCKET_NAME env-var must be set")
+#             raise RuntimeError("S3_DATASETS_BUCKET_NAME env-var must be set")
 
 #         # ① stream both pickles
 #         train = unpickle_from_s3(bucket, "cifar100/train")
@@ -119,11 +119,12 @@ import pickle
 import numpy as np
 from .dataset import Dataset
 import matplotlib.pyplot as plt
+import pickle, logging
+
 # from data.datasets.cifar100_info import CIFAR100_INFO
 # from dataset_service import _get_dataset_config
-from .dataset import Dataset 
-import pickle, logging
-from s3_connector.s3_dataset_utils import unpickle_from_s3
+from NMA.classes.datasets.dataset import Dataset 
+from NMA.s3_connector.s3_dataset_utils import unpickle_from_s3
 
 
 class Cifar100(Dataset):

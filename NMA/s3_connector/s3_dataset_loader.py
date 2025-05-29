@@ -2,10 +2,10 @@ import os
 import sys
 from typing import Dict, List, Any, Tuple
 import numpy as np
-from utilss.s3_connector.s3_handler import S3Handler
-from utilss.s3_connector.s3_cifar_loader import S3CifarLoader
-from utilss.s3_connector.s3_imagenet_loader import S3ImagenetLoader
-from utilss.enums.datasets_enum import DatasetsEnum
+from NMA.s3_connector.s3_handler import S3Handler
+from NMA.s3_connector.s3_cifar_loader import S3CifarLoader
+from NMA.s3_connector.s3_imagenet_loader import S3ImagenetLoader
+from NMA.utilss.enums.datasets_enum import DatasetsEnum
 
 class S3DatasetLoader:
     def __init__(self, s3_handler=None, bucket_name=None):

@@ -4,3 +4,4 @@ testing_shit.py
 *.pyc
 /.venv
 **/__init__.py
+*__pycache__

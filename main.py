@@ -1,7 +1,12 @@
 import os
 from NMA.nma_service import _create_nma
+import sys
+sys.path.append('/app')
+from dotenv import load_dotenv
 
 def main():
+    load_dotenv()
+    
     user_id = os.getenv("user_id")
     model_id = os.getenv("model_id")
     graph_type = os.getenv("graph_type")

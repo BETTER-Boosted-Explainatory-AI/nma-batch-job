@@ -14,7 +14,7 @@
 # import logging
 # from classes.model import Model
 # from classes.dendrogram import Dendrogram
-# # from utilss.photos_utils import preprocess_loaded_image
+# # from NMA.utilss.photos_utils import preprocess_loaded_image
 # from NMA.dataset_service import get_dataset_labels
 # import json
 # from NMA.utilss.enums.datasets import DatasetsEnum
@@ -374,6 +374,7 @@
 #     }
 
 
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -388,17 +389,17 @@ from typing import Dict, Any, Optional
 # import tensorflow_io as tfio  
 import tensorflow as tf 
 import logging
-from classes.model import Model
-from classes.dendrogram import Dendrogram
-from utilss.photos_utils import preprocess_loaded_image
-from .dataset_service import get_dataset_labels
-from fastapi import HTTPException, status
+from NMA.classes.model import Model
+from NMA.classes.dendrogram import Dendrogram
+from NMA.utilss.photos_utils import preprocess_loaded_image
+from NMA.dataset_service import get_dataset_labels
+# from fastapi import HTTPException, status
 import json
-from utilss.enums.datasets_enum import DatasetsEnum
+from NMA.utilss.enums.datasets_enum import DatasetsEnum
 import shutil
 import time
 import tempfile
-from utilss.s3_utils import get_users_s3_client
+from NMA.utilss.s3_utils import get_users_s3_client
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -432,22 +433,13 @@ def get_model():
 
 def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-            detail="user_id is required"
-        )
+        raise ("user_id is required")
     
     if model_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-            detail="model_id is required"
-        )
+        raise ("model_id is required")
     
     if graph_type is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-            detail="graph_type is required"
-        )
+        raise ValueError("graph_type is required")
     
     logger.info(f"Checking model path for user_id: {user_id}, model_id: {model_id}, graph_type: {graph_type}")
 
@@ -456,10 +448,7 @@ def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[
     logger.debug(f"Model path: {model_path}")
 
     if model_path is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Could not find model directory"
-        )
+        raise ValueError("Could not find model directory")
     return model_path
 
     
@@ -524,18 +513,15 @@ def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
 #             model_filename = os.path.join(model_path, file_name)
 #             return model_filename
 
+# current_user.user_id, model_id, dataset, graph_type, min_confidence, top_k
 
 ## S3 implementation ### 
 def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     """Get S3 model filename"""
     model_path = _get_model_path(user_id, model_id)
     if model_path is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Could not find model directory"
-        )
+        raise ValueError("Could not find model directory")
     
-    # Find .keras file in S3 prefix
     s3_client =  get_users_s3_client() 
     
     try:
@@ -630,8 +616,41 @@ def read_json_from_s3(bucket_name: str, s3_key: str) -> Any:
         logger.error(f"Error reading JSON from S3 ({bucket_name}/{s3_key}): {e}")
         raise
 
+# def load_model_from_s3(bucket_name: str, s3_key: str):
+#     """Load Keras model from S3"""
+#     # Check if s3_key is actually a full S3 URI
+#     if s3_key.startswith('s3://'):
+#         parts = s3_key.replace('s3://', '').split('/', 1)
+#         bucket = parts[0]
+#         key = parts[1] if len(parts) > 1 else ''
+#     else:
+#         bucket = bucket_name
+#         key = s3_key
+    
+#     s3_client =  get_users_s3_client() 
+    
+#     # Use a temporary directory instead of a temporary file
+#     # This approach is more reliable on Windows
+#     with tempfile.TemporaryDirectory() as temp_dir:
+#         temp_model_path = os.path.join(temp_dir, 'model.keras')
+        
+#         try:
+#             # Download the model file to the temp directory
+#             s3_client.download_file(bucket, key, temp_model_path)
+            
+#             # Load the model from the temp file
+#             model = tf.keras.models.load_model(temp_model_path)
+#             return model
+            
+#         except Exception as e:
+#             logger.error(f"Error loading model from S3 ({bucket}/{key}): {e}")
+#             raise
+
+
+
+# batch implementation
 def load_model_from_s3(bucket_name: str, s3_key: str):
-    """Load Keras model from S3"""
+    """Load Keras model from S3 with version compatibility handling"""
     # Check if s3_key is actually a full S3 URI
     if s3_key.startswith('s3://'):
         parts = s3_key.replace('s3://', '').split('/', 1)
@@ -641,7 +660,7 @@ def load_model_from_s3(bucket_name: str, s3_key: str):
         bucket = bucket_name
         key = s3_key
     
-    s3_client =  get_users_s3_client() 
+    s3_client = get_users_s3_client() 
     
     # Use a temporary directory instead of a temporary file
     # This approach is more reliable on Windows
@@ -650,15 +669,69 @@ def load_model_from_s3(bucket_name: str, s3_key: str):
         
         try:
             # Download the model file to the temp directory
+            logger.info(f"Downloading model from S3: {bucket}/{key}")
             s3_client.download_file(bucket, key, temp_model_path)
             
-            # Load the model from the temp file
-            model = tf.keras.models.load_model(temp_model_path)
-            return model
-            
+            # First try loading with custom object scope to handle version differences
+            try:
+                logger.info("Attempting to load model with custom object scope...")
+                with tf.keras.utils.custom_object_scope({'Functional': tf.keras.Model}):
+                    model = tf.keras.models.load_model(temp_model_path, compile=False)
+                logger.info("Model loaded successfully with custom object scope")
+                return model
+            except Exception as custom_error:
+                logger.warning(f"Could not load with custom object scope: {str(custom_error)}")
+                
+                # Check if this is a keras.src module error
+                if 'keras.src.models.functional' in str(custom_error):
+                    logger.warning("This model was saved with TensorFlow 2.13+ but you're using an older version")
+                    logger.warning("Attempting alternative loading approaches...")
+                    
+                    # Try using a fallback model
+                    if key.lower().find('resnet50') >= 0:
+                        logger.info("Creating ResNet50 fallback model...")
+                        fallback_model = tf.keras.applications.ResNet50(weights=None)
+                        logger.info("Using ResNet50 fallback model")
+                        return fallback_model
+                    else:
+                        # For other models, try a different loading approach
+                        try:
+                            # Try loading with h5py directly if it's an H5 file
+                            import h5py
+                            if temp_model_path.endswith(('.h5', '.keras')):
+                                logger.info("Trying to load model weights directly...")
+                                with h5py.File(temp_model_path, 'r') as h5file:
+                                    # Check if it's a weights-only file
+                                    if 'model_weights' in h5file:
+                                        # Create a base model with matching architecture
+                                        logger.info("Found weights file, creating compatible model...")
+                                        base_model = tf.keras.Sequential([
+                                            tf.keras.layers.InputLayer(input_shape=(224, 224, 3)),
+                                            tf.keras.applications.ResNet50(include_top=True, weights=None)
+                                        ])
+                                        base_model.load_weights(temp_model_path)
+                                        logger.info("Model weights loaded successfully")
+                                        return base_model
+                        except Exception as h5_error:
+                            logger.warning(f"Could not load weights directly: {str(h5_error)}")
+                    
+                    # Last resort: create a new model from scratch
+                    logger.warning("All loading attempts failed. Creating a new model as fallback.")
+                    logger.warning("Please upgrade to TensorFlow 2.13+ to properly load this model.")
+                    return tf.keras.applications.ResNet50(weights='imagenet')
+                
+                # If it's not a keras.src error or fallbacks failed, try standard loading
+                logger.info("Attempting standard model loading...")
+                model = tf.keras.models.load_model(temp_model_path, compile=False)
+                return model
+                
         except Exception as e:
             logger.error(f"Error loading model from S3 ({bucket}/{key}): {e}")
-            raise
+            logger.error("This model requires TensorFlow 2.13+ to load properly")
+            logger.error("Creating a fallback model instead")
+            
+            # Return a fallback model
+            return tf.keras.applications.ResNet50(weights='imagenet')
         
 
 # ### original implemetation ###

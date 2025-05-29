@@ -2,7 +2,7 @@ from nltk.corpus import wordnet as wn
 import os
 import boto3
 import re
-from utilss.s3_utils import get_datasets_s3_client
+from NMA.utilss.s3_utils import get_datasets_s3_client
  
 # def convert_folder_names_to_readable_labels(dataset_path):
 #     if not os.path.exists(dataset_path):
