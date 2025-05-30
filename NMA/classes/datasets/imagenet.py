@@ -726,7 +726,7 @@ logger = logging.getLogger(__name__)
 
 class ImageNet(Dataset):
     def __init__(self):
-        from dataset_service import _get_dataset_config
+        from NMA.dataset_service import _get_dataset_config
         config = _get_dataset_config("imagenet")
 
         super().__init__(config["dataset"], config["threshold"], config["infinity"], config["directory_labels"])
@@ -930,7 +930,7 @@ class ImageNet(Dataset):
     
     
     def load(self, name):
-        from dataset_service import _get_dataset_config
+        from NMA.dataset_service import _get_dataset_config
         
         # Check if S3 bucket is configured
         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
@@ -1001,7 +1001,7 @@ class ImageNet(Dataset):
 
 
     def directory_to_labels_conversion(self, label):
-        from dataset_service import _get_dataset_config
+        from NMA.dataset_service import _get_dataset_config
         dir_to_readable = _get_dataset_config("imagenet")["directory_to_readable"]
         return dir_to_readable[label]
     
@@ -1016,7 +1016,7 @@ class ImageNet(Dataset):
         logger.info(f"Loading ImageNet from S3: {bucket}/{prefix}")
         
         # Ensure we have the directory_labels loaded
-        from dataset_service import _get_dataset_config
+        from NMA.dataset_service import _get_dataset_config
         config = _get_dataset_config("imagenet")
         
         # Load required attributes if not already loaded

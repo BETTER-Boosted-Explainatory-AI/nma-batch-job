@@ -129,7 +129,7 @@ from NMA.s3_connector.s3_dataset_utils import unpickle_from_s3
 
 class Cifar100(Dataset):
     def __init__(self):
-        from dataset_service import _get_dataset_config
+        from NMA.dataset_service import _get_dataset_config
         super().__init__(_get_dataset_config("cifar100")["dataset"], _get_dataset_config("cifar100")["threshold"], _get_dataset_config("cifar100")["infinity"], _get_dataset_config("cifar100")["labels"])
         self.x_train = None
         self.y_train = None
@@ -143,7 +143,7 @@ class Cifar100(Dataset):
     
 class Cifar100(Dataset):
     def __init__(self):
-        from dataset_service import _get_dataset_config
+        from NMA.dataset_service import _get_dataset_config
 
         cfg = _get_dataset_config("cifar100")
         super().__init__(cfg["dataset"], cfg["threshold"], cfg["infinity"], cfg["labels"])

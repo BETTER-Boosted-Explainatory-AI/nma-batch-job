@@ -14,7 +14,6 @@ def main():
     min_confidence = float(os.getenv("min_confidence", 0.5))
     top_k = int(os.getenv("top_k", 4))
     result = _create_nma(user_id, model_id, graph_type, dataset, min_confidence, top_k)
-    print("NMA result:", result)
 
 if __name__ == "__main__":
     main()

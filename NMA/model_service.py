@@ -726,12 +726,7 @@ def load_model_from_s3(bucket_name: str, s3_key: str):
                 return model
                 
         except Exception as e:
-            logger.error(f"Error loading model from S3 ({bucket}/{key}): {e}")
-            logger.error("This model requires TensorFlow 2.13+ to load properly")
-            logger.error("Creating a fallback model instead")
-            
-            # Return a fallback model
-            return tf.keras.applications.ResNet50(weights='imagenet')
+            logger.error(f"Error loading model from S3 ({bucket}/{key})")
         
 
 # ### original implemetation ###
