@@ -120,7 +120,7 @@ class EdgesDataframe:
             if self.using_s3:
                 # Save to S3
                 if self._s3_file_exists(self.s3_bucket, self.df_filename):
-                    logger.info(f'File already exists in S3, skipping save: s3://{self.s3_bucket}/{self.df_filename}')
+                    logger.info(f'File already exists in S3, skipping save: {self.s3_bucket}/{self.df_filename}')
                     return
                 
                 # Convert DataFrame to CSV in memory
@@ -134,7 +134,7 @@ class EdgesDataframe:
                     Key=self.df_filename,
                     Body=csv_buffer.getvalue()
                 )
-                logger.info(f'Edges dataframe has been saved to S3: s3://{self.s3_bucket}/{self.df_filename}')
+                logger.info(f'Edges dataframe has been saved to S3: {self.s3_bucket}/{self.df_filename}')
             else:
                 # Save locally (original implementation)
                 directory = os.path.dirname(self.df_filename)
@@ -190,7 +190,7 @@ class EdgesDataframe:
                     logger.info(f"DataFrame columns: {self.edges_df.columns.tolist()}")
                     logger.info(f"First few rows: {self.edges_df.head().to_string()}")
                 else:
-                    logger.info(f'File not found in S3: s3://{self.s3_bucket}/{self.df_filename}')
+                    logger.info(f'File not found in S3: {self.s3_bucket}/{self.df_filename}')
             else:
                 # Load locally (original implementation)
                 if os.path.exists(self.df_filename):

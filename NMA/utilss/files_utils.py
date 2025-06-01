@@ -418,11 +418,20 @@ def user_has_job_running(current_user):
 
 
 ### S3 implementation ### 
-def update_current_model(user, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
+def update_current_model(user_id, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
     """
-    Update the current model for the user
+    Update the current model for a user
+    
+    Args:
+        user_id (str): User ID
+        model_id (str): Model ID
+        graph_type (str): Graph type
+        model_filename (str): Model file name
+        dataset (str): Dataset name
+        min_confidence (float): Minimum confidence
+        top_k (int): Top K value
     """
-    # Extract dataset name instead of passing the whole object
+    # Extract dataset name if dataset is an object
     if hasattr(dataset, 'dataset'):
         dataset_name = dataset.dataset
     elif hasattr(dataset, '__class__'):
@@ -430,13 +439,55 @@ def update_current_model(user, model_id, graph_type, model_filename, dataset, mi
     else:
         dataset_name = str(dataset)
     
+    # Create model metadata
     model_metadata = {
         "model_id": model_id,
         "file_name": model_filename,
-        "dataset": dataset_name,  
+        "dataset": dataset_name,
         "graph_type": graph_type,
         "min_confidence": min_confidence,
         "top_k": top_k
     }
-
-    user.set_current_model(model_metadata)
+    
+    # Get S3 client
+    s3_client = get_users_s3_client()
+    s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
+    if not s3_bucket:
+        raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
+    
+    # Define models.json key
+    models_json_key = f"{user_id}/models.json"
+    
+    try:
+        # Try to get existing models.json
+        try:
+            response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_key)
+            models_data = json.loads(response['Body'].read().decode('utf-8'))
+        except s3_client.exceptions.NoSuchKey:
+            # Create new models.json if it doesn't exist
+            models_data = []
+        
+        # Update or add model metadata
+        model_found = False
+        for i, model in enumerate(models_data):
+            if str(model.get("model_id")) == str(model_id):
+                models_data[i] = model_metadata
+                model_found = True
+                break
+        
+        if not model_found:
+            models_data.append(model_metadata)
+        
+        # Upload updated models.json to S3
+        s3_client.put_object(
+            Bucket=s3_bucket,
+            Key=models_json_key,
+            Body=json.dumps(models_data, indent=4),
+            ContentType='application/json'
+        )
+        
+        logger.info(f"Updated current model for user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error updating current model: {e}")
+        raise

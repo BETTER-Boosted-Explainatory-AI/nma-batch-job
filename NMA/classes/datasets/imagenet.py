@@ -212,9 +212,9 @@
 # #         from dataset_service import _get_dataset_config
         
 # #         # Check if S3 bucket is configured
-# #         bucket = os.getenv("S3_BUCKET_NAME")
+# #         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
 # #         if not bucket:
-# #             raise RuntimeError("S3_BUCKET_NAME environment variable must be set")
+# #             raise RuntimeError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
 # #         # Construct paths that mimic the local structure but for S3
 # #         # Original: data/datasets/imagenet/train
@@ -502,9 +502,9 @@
 #         from dataset_service import _get_dataset_config
         
 #         # Check if S3 bucket is configured
-#         bucket = os.getenv("S3_BUCKET_NAME")
+#         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
 #         if not bucket:
-#             raise RuntimeError("S3_BUCKET_NAME environment variable must be set")
+#             raise RuntimeError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
 #         # Construct paths that mimic the local structure but for S3
 #         # Original: data/datasets/imagenet/train
@@ -720,20 +720,19 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from NMA.s3_connector.s3_dataset_loader import S3DatasetLoader
 from NMA.s3_connector.s3_imagenet_loader import S3ImagenetLoader
+from NMA.utilss.s3_utils import get_datasets_s3_client
 
 import logging
 logger = logging.getLogger(__name__)
 
 class ImageNet(Dataset):
     def __init__(self):
-        from NMA.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
         config = _get_dataset_config("imagenet")
 
         super().__init__(config["dataset"], config["threshold"], config["infinity"], config["directory_labels"])
         self.x_train = None
         self.y_train = None
-        self.x_test = None
-        self.y_test = None
         self.directory_labels = config["directory_labels"]
         self.s3_loader = S3ImagenetLoader()
         
@@ -930,28 +929,34 @@ class ImageNet(Dataset):
     
     
     def load(self, name):
-        from NMA.dataset_service import _get_dataset_config
-        
-        # Check if S3 bucket is configured
+        from NMA.services.dataset_service import _get_dataset_config
+
+        # 1. pull in your dataset config (for labels, thresholds, etc.)
+        config = _get_dataset_config("imagenet")
+
+        # 2. make sure the bucket is set
         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
             raise RuntimeError("S3_DATASETS_BUCKET_NAME environment variable must be set")
-        
-        # Construct paths that mimic the local structure but for S3
-        # Original: data/datasets/imagenet/train
-        # S3: imagenet/train
-        dataset_path = os.path.join("data", "datasets", name) 
-        train_path = os.path.join(dataset_path, "train")
-        test_path = os.path.join(dataset_path, "test")
 
-        # Load using the same function but it will now fetch from S3
-        self.x_train, self.y_train = self.load_mini_imagenet(train_path)
-        # self.x_test, self.y_test = self.load_mini_imagenet(test_path)
-        
-        self.directory_labels = _get_dataset_config("imagenet")["directory_labels"]
-        print(f"Loaded {len(self.x_train)} training images")
+        # 3. create an actual S3 client
+        s3_client = get_datasets_s3_client()
 
-        print("loaded imagenet dataset")
+        # 4. define the S3 key prefixes (not local paths!)
+        train_prefix = f"{name}/train"
+        # test_prefix  = f"{name}/test"
+
+        # 5. load train & test splits via your helper
+        #    note: load_from_s3(self, s3_client, bucket, prefix)
+        self.x_train, self.y_train = self.load_from_s3(s3_client, bucket, train_prefix)
+        # self.x_test,  self.y_test  = self.load_from_s3(s3_client, bucket, test_prefix)
+
+        # 6. restore any other config you need
+        self.directory_labels = config["directory_labels"]
+
+        # 7. done!
+        print(f"Loaded {len(self.x_train)} train images")
+
 
 
     # def get_train_image_by_id(self, image_id):
@@ -1001,7 +1006,7 @@ class ImageNet(Dataset):
 
 
     def directory_to_labels_conversion(self, label):
-        from NMA.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
         dir_to_readable = _get_dataset_config("imagenet")["directory_to_readable"]
         return dir_to_readable[label]
     
@@ -1016,7 +1021,7 @@ class ImageNet(Dataset):
         logger.info(f"Loading ImageNet from S3: {bucket}/{prefix}")
         
         # Ensure we have the directory_labels loaded
-        from NMA.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
         config = _get_dataset_config("imagenet")
         
         # Load required attributes if not already loaded
@@ -1050,9 +1055,8 @@ class ImageNet(Dataset):
         x_train = []
         y_train = []
         
-        # Process each class folder (increased limits for real use)
-        max_classes = 20  # ✅ INCREASED: Process more classes
-        max_images_per_class = 50  # ✅ INCREASED: More images per class
+        max_classes = 1000
+        max_images_per_class = 10  
         
         processed_classes = 0
         for folder in class_folders:

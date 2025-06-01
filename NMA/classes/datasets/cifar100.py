@@ -129,7 +129,7 @@ from NMA.s3_connector.s3_dataset_utils import unpickle_from_s3
 
 class Cifar100(Dataset):
     def __init__(self):
-        from NMA.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
         super().__init__(_get_dataset_config("cifar100")["dataset"], _get_dataset_config("cifar100")["threshold"], _get_dataset_config("cifar100")["infinity"], _get_dataset_config("cifar100")["labels"])
         self.x_train = None
         self.y_train = None
@@ -143,16 +143,16 @@ class Cifar100(Dataset):
     
 class Cifar100(Dataset):
     def __init__(self):
-        from NMA.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
 
         cfg = _get_dataset_config("cifar100")
         super().__init__(cfg["dataset"], cfg["threshold"], cfg["infinity"], cfg["labels"])
         self.log = logging.getLogger(__name__)
 
     def load(self, name):                         
-        bucket = os.getenv("S3_BUCKET_NAME")
+        bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
-            raise RuntimeError("S3_BUCKET_NAME env-var must be set")
+            raise RuntimeError("S3_DATASETS_BUCKET_NAME env-var must be set")
 
         # ① stream both pickles
         train = unpickle_from_s3(bucket, "cifar100/train")

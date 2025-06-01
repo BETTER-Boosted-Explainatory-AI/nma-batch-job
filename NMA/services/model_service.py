@@ -392,7 +392,7 @@ import logging
 from NMA.classes.model import Model
 from NMA.classes.dendrogram import Dendrogram
 from NMA.utilss.photos_utils import preprocess_loaded_image
-from NMA.dataset_service import get_dataset_labels
+from NMA.services.dataset_service import get_dataset_labels
 # from fastapi import HTTPException, status
 import json
 from NMA.utilss.enums.datasets_enum import DatasetsEnum
@@ -765,7 +765,7 @@ def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
         resnet_model, 
         dataset_config["top_k"], 
         dataset_config["min_confidence"],
-        f"s3://{bucket_name}/{s3_key}", 
+        f"{bucket_name}/{s3_key}", 
         dataset_config["dataset"]
     )
     

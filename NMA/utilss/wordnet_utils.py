@@ -76,9 +76,9 @@ def convert_folder_names_to_readable_labels(dataset_path):
         bucket = parts[0]
         prefix = parts[1] if len(parts) > 1 else ''
     else:
-        bucket = os.getenv("S3_BUCKET_NAME")
+        bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
-            raise ValueError("S3_BUCKET_NAME environment variable is required when not using full s3:// path")
+            raise ValueError("S3_DATASETS_BUCKET_NAME environment variable is required when not using full s3:// path")
         prefix = dataset_path
     
     # Ensure prefix ends with '/'

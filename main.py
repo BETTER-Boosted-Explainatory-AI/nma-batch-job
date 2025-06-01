@@ -1,5 +1,5 @@
 import os
-from NMA.nma_service import _create_nma
+from NMA.services.nma_service import _create_nma
 import sys
 sys.path.append('/app')
 from dotenv import load_dotenv

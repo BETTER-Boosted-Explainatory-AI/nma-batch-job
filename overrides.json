@@ -1,7 +1,0 @@
-{
-  "command": ["python", "main.py"],
-  "environment": [
-    {"name": "S3_USERS_BUCKET_NAME", "value": "better-xai-users"},
-    {"name": "min_confidence", "value": "0.5"}
-  ]
-}

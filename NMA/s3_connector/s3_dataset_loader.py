@@ -9,7 +9,7 @@ from NMA.utilss.enums.datasets_enum import DatasetsEnum
 
 class S3DatasetLoader:
     def __init__(self, s3_handler=None, bucket_name=None):
-        self.bucket_name = bucket_name or os.environ.get('S3_BUCKET_NAME')
+        self.bucket_name = bucket_name or os.environ.get('S3_DATASETS_BUCKET_NAME')
         if not self.bucket_name:
             raise ValueError("S3 bucket name not specified")
             

@@ -7,14 +7,14 @@ import pickle
 import io
 import sys
 from types import ModuleType
-
+from NMA.utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
 class S3Handler:
     
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, bucket_name=None):
         """Initialize S3 handler with AWS credentials."""
         self.aws_access_key_id = aws_access_key_id or os.environ.get('AWS_DATASETS_ACCESS_KEY_ID')
         self.aws_secret_access_key = aws_secret_access_key or os.environ.get('AWS_DATASETS_SECRET_ACCESS_KEY')
-        self.bucket_name = bucket_name or os.environ.get('S3_BUCKET_NAME')
+        self.bucket_name = bucket_name or os.environ.get('S3_DATASETS_BUCKET_NAME')
         
         if not self.aws_access_key_id or not self.aws_secret_access_key:
             raise ValueError("AWS credentials not found")
@@ -22,12 +22,7 @@ class S3Handler:
         if not self.bucket_name:
             raise ValueError("S3 bucket name not specified")
         
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key
-        )
-    
+        self.s3_client = get_datasets_s3_client()
     def list_objects(self, prefix=''):
         """List objects in the S3 bucket with the given prefix."""
         try:

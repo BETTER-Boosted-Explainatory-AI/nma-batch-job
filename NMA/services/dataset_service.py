@@ -49,8 +49,9 @@ def _load_dataset(dataset_str: str):
 
     dataset_name = dataset_config["dataset"]        # "cifar100" | "imagenet" | …
     dataset = DatasetFactory.create_dataset(dataset_name)
-    dataset.load(dataset_name)       
-
+    # dataset.load(dataset_str)       
+    print("dataset", dataset)
+    
     return dataset
 
 # def _load_dataset(dataset_str: str):
@@ -66,9 +67,9 @@ def _load_dataset(dataset_str: str):
 
 # # def _load_dataset(dataset_str: str):
 # #     """Load the dataset from S3."""
-# #     bucket_name = os.environ.get('S3_BUCKET_NAME')
+# #     bucket_name = os.environ.get('S3_DATASETS_BUCKET_NAME')
 # #     if not bucket_name:
-# #         raise ValueError("S3_BUCKET_NAME environment variable must be set")
+# #         raise ValueError("S3_DATASETS_BUCKET_NAME environment variable must be set")
         
 # #     s3_loader = S3DatasetLoader(bucket_name=bucket_name)
     

@@ -7,6 +7,7 @@ class Dataset(ABC):
         self.threshold = threshold
         self.infinity = infinity
         self.labels = labels
+        
 
     @abstractmethod
     def load(self, name):

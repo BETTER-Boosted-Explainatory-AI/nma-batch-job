@@ -1,8 +1,6 @@
 numpy
 matplotlib
 nltk
-tensorflow
-keras
 scikit-learn
 pandas
 igraph
@@ -10,3 +8,5 @@ python-dotenv
 python-multipart
 python-jose
 boto3
+tensorflow==2.15.0
+keras==3.0.5
