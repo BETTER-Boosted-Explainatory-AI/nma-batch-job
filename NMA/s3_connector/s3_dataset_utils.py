@@ -1,13 +1,13 @@
 import os
 from typing import Dict, List, Tuple, Any
 import numpy as np
-from NMA.utilss.s3_utils import get_datasets_s3_client
+from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
+
 from NMA.s3_connector.s3_dataset_loader import S3DatasetLoader
 import boto3, io, pickle, logging
 
-
 log = logging.getLogger(__name__)
-_s3  = get_datasets_s3_client()  
+_s3  = ("s3")  
 
 def load_dataset_numpy(dataset_str: str, folder_type: str) -> Dict[str, np.ndarray]:
 

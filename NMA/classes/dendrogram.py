@@ -9,7 +9,7 @@ import io
 from botocore.exceptions import ClientError
 import logging
 from NMA.utilss.s3_utils import get_users_s3_client
-from NMA.utilss.debug import assert_acyclic, CycleFound
+from NMA.utilss.cycle_found import assert_acyclic, CycleFound
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class Dendrogram:
     def _build_tree_hierarchy(self, linkage_matrix, labels):
         tree, nodes = to_tree(linkage_matrix, rd=True)
         self.Z_tree_format = self._build_tree_format(tree, labels)
-        self.Z_tree_format = process_hierarchy(self.Z_tree_format)
+        # self.Z_tree_format = process_hierarchy(self.Z_tree_format)
         
         try:
             assert_acyclic(self.Z_tree_format)

@@ -3,11 +3,13 @@ import os
 import importlib.util
 import numpy as np
 from botocore.exceptions import NoCredentialsError, ClientError
+from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
+
 import pickle
 import io
 import sys
 from types import ModuleType
-from NMA.utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
+
 class S3Handler:
     
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, bucket_name=None):
@@ -23,6 +25,7 @@ class S3Handler:
             raise ValueError("S3 bucket name not specified")
         
         self.s3_client = get_datasets_s3_client()
+    
     def list_objects(self, prefix=''):
         """List objects in the S3 bucket with the given prefix."""
         try:
@@ -185,7 +188,7 @@ class S3Handler:
                 if parts[0].startswith('n') and len(parts[0]) > 1 and not parts[0].endswith('.txt'):
                     class_dirs.add(parts[0])
         
-        return sorted(list(class_dirs))
+        return class_dirs
     
     def load_python_module_from_s3(self, s3_key):
         """Load a Python module directly from S3 without saving to disk"""
