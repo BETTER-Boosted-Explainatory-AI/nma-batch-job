@@ -119,63 +119,69 @@ class NMA:
             # Now use the WORKING graph building logic from paste-3.txt
             graph = Graph(directed=False)
             graph.add_vertices(self.labels)
-            
+
             edges_data = []
             batch_images = []
             batch_labels = []
+            batch_indices = [] 
             
-            predictor = BatchPredictor(self.model)
+            predictor = BatchPredictor(self.model, batch_size)
             builder = GraphBuilder(self.graph_type, self.infinity)
-            
             for i, image in enumerate(X):
                 source_label = y[i]
-                
                 batch_images.append(image)
                 batch_labels.append(source_label)
-                
+                batch_indices.append(i)
                 if len(batch_images) == predictor.batch_size or i == len(X) - 1:
                     top_predictions_batch = predictor.get_top_predictions(
                         batch_images, self.labels, self.top_k, self.graph_threshold
                     )
                     
-                    added_labels = []
                     for j, top_predictions in enumerate(top_predictions_batch):
                         current_label = batch_labels[j]
+                        original_index = batch_indices[j]
+                        
+                        # Initialize the set of seen labels for this specific image
+                        # Always include the current label
+                        seen_labels_for_image = {current_label}
                         
                         if len(top_predictions) == 0:
-                            print(top_predictions)
+                            print("Empty predictions for image", original_index)
                             continue
                         
                         if len(top_predictions[0]) < 2:
+                            print("Malformed predictions for image", original_index)
                             continue
                         
-                        if top_predictions[0][1] != current_label:
-                            logger.debug(f"First prediction label '{top_predictions[0][1]}' does not match current label, Skipping.")
-                            continue
-                        
+                        # Process predictions that meet confidence threshold
                         if top_predictions[0][2] > self.min_confidence:
                             filtered_predictions = top_predictions
-                                                        
+
+                            if filtered_predictions[0][1] != current_label:
+                                continue
+                            
                             for _, pred_label, pred_prob in filtered_predictions:
                                 if pred_label not in self.labels:
-                                    print(f"Prediction label '{pred_label}' not in graph labels.")
-                                    continue
-    
+                                    raise ValueError(
+                                        f"Prediction label '{pred_label}' not in graph labels."
+                                    )
+                                # Add to seen labels set for this image
+                                seen_labels_for_image.add(pred_label)
+                                
                                 if current_label != pred_label:
                                     edge_data = builder.update_graph(
-                                        graph, current_label, pred_label, pred_prob, i, dataset_class
+                                        graph, current_label, pred_label, pred_prob, original_index, dataset_class
                                     )
+                                    # Only append edge_data if it's not None (not a self-loop)
                                     if edge_data is not None:
                                         edges_data.append(edge_data)
-                                        added_labels.append(pred_label)
-                                        
-                        # Using the working version's logic for dissimilarity
-                        if self.graph_type == "dissimilarity":
+                        
+                        # Now add infinity edges for all labels not seen in THIS image
+                        if self.graph_type == GraphTypes.DISSIMILARITY.value:
                             for label in self.labels:
-                                if label != current_label:
-                                    builder.add_infinity_edges(
-                                        graph, added_labels, label, current_label
-                                    )
+                                # Only add infinity edges for labels not seen in this image's predictions
+                                if label not in seen_labels_for_image:
+                                    builder.add_infinity_edges( graph, label, current_label)
                 
                     batch_images = []
                     batch_labels = []
