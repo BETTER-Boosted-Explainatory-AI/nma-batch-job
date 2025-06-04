@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.12.0-gpu
+FROM tensorflow/tensorflow:2.15.0-gpu
 # Set working directory
 WORKDIR /app
 # Install system dependencies
