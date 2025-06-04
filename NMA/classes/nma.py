@@ -149,6 +149,10 @@ class NMA:
                         if len(top_predictions[0]) < 2:
                             continue
                         
+                        if top_predictions[0][1] != current_label:
+                            logger.debug(f"First prediction label '{top_predictions[0][1]}' does not match current label, Skipping.")
+                            continue
+                        
                         if top_predictions[0][2] > self.min_confidence:
                             filtered_predictions = top_predictions
                                                         
