@@ -1,0 +1,12 @@
+numpy
+matplotlib
+nltk
+scikit-learn
+pandas
+igraph
+python-dotenv
+python-multipart
+python-jose
+boto3
+tensorflow
+keras
