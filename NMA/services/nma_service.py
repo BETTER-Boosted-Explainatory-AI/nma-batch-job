@@ -18,9 +18,8 @@ from NMA.classes.nma import NMA
 from NMA.services.dataset_service import _get_dataset_config, _load_dataset
 from NMA.services.model_service import _get_model_filename, _load_model
 from NMA.utilss.files_utils import update_current_model
-from NMA.utilss.debug import assert_acyclic, CycleFound
 from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
-
+from adversarial_files.adversarial_service import create_logistic_regression_detector
 
 sys.setrecursionlimit(10_000)  
 # --------------------------------------------------------------------------- #
@@ -79,6 +78,9 @@ def _create_nma(
     dataset: str,
     min_confidence: float,
     top_k: int,
+    clean_images=None,
+    adversarial_images=None,
+    
 ):
     """
     Build graph + dendrogram for `model_id`, save artefacts to S3 and return
@@ -137,8 +139,8 @@ def _create_nma(
         
         # S3 paths for artefacts
         base_prefix = f"{user_id}/{model_id}"
-        dataframe_key = f"{base_prefix}/{graph_type}/edges_df_test.csv"
-        dendrogram_key = f"{base_prefix}/{graph_type}/dendrogram_test"
+        dataframe_key = f"{base_prefix}/{graph_type}/edges_df.csv"
+        dendrogram_key = f"{base_prefix}/{graph_type}/dendrogram"
         logger.info("S3 targets → edges: %s | dendrogram: %s", dataframe_key, dendrogram_key)
         
         # Save edges dataframe
@@ -184,9 +186,10 @@ def _create_nma(
         
         init_json = dendro.get_sub_dendrogram_formatted(available_readable_labels)
         
+        detector = create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id)
+        
         logger.debug("Initial sub-tree JSON length=%d", len(str(init_json)))
         
-        # Update metadata
         with timed("Update current_model metadata"):
             update_current_model(
                 user_id,
