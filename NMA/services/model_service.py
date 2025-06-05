@@ -3,13 +3,8 @@ load_dotenv()
 
 import os
 import numpy as np
-import zipfile
-import io
-import boto3
 from botocore.exceptions import ClientError
-from contextlib import contextmanager
 from typing import Dict, Any, Optional
-# import tensorflow_io as tfio  
 import tensorflow as tf 
 import logging
 from NMA.classes.model import Model
@@ -18,8 +13,6 @@ from NMA.utilss.photos_utils import preprocess_loaded_image
 from NMA.services.dataset_service import get_dataset_labels
 import json
 from NMA.utilss.enums.datasets_enum import DatasetsEnum
-import shutil
-import time
 import tempfile
 from NMA.utilss.s3_utils import get_users_s3_client
 

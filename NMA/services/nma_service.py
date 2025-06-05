@@ -6,9 +6,6 @@ from datetime import datetime
 from contextlib import contextmanager
 from typing import Iterable
 
-import boto3
-from tqdm import tqdm                           # pip install tqdm
-
 from NMA.utilss.enums.graph_types import GraphTypes
 from NMA.utilss.enums.datasets_enum import DatasetsEnum
 from NMA.classes.dendrogram import Dendrogram
@@ -18,7 +15,8 @@ from NMA.services.dataset_service import _get_dataset_config, _load_dataset
 from NMA.services.model_service import _get_model_filename, _load_model
 from NMA.utilss.files_utils import update_current_model
 from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
-from adversarial_files.adversarial_service import create_logistic_regression_detector
+from NMA.services.adversarial_files.adversarial_service import create_logistic_regression_detector
+from NMA.services.ses_batch_service import send_email_notification
 
 sys.setrecursionlimit(10_000)  
 # --------------------------------------------------------------------------- #
@@ -30,7 +28,6 @@ logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
     format="%(asctime)s  %(levelname)-8s  %(name)s: %(message)s",
     handlers=[
-        logging.FileHandler(f"create_nma_{datetime.now():%Y%m%d_%H%M%S}.log", mode="w"),
         logging.StreamHandler(),
     ],
 )
@@ -183,11 +180,11 @@ def _create_nma(
         else:
             available_readable_labels = list(set(readable_labels[:100]))[:10]
         
-        init_json = dendro.get_sub_dendrogram_formatted(available_readable_labels)
+        # init_json = dendro.get_sub_dendrogram_formatted(available_readable_labels)
         
-        detector = create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id)
+        create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id)
         
-        logger.debug("Initial sub-tree JSON length=%d", len(str(init_json)))
+        # logger.debug("Initial sub-tree JSON length=%d", len(str(init_json)))
         
         with timed("Update current_model metadata"):
             update_current_model(
@@ -200,8 +197,12 @@ def _create_nma(
                 top_k,
             )
 
+        send_email_notification(user_id, model_key, graph_type)
+
         logger.info("🎉 create_nma completed in %.2fs", time.perf_counter() - t_global)
-        return init_json
+
+
+        # return init_json
 
     except Exception:
         logger.exception("create_nma failed")
