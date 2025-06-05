@@ -9,23 +9,38 @@ import pickle
 import io
 import sys
 from types import ModuleType
+from typing import Optional
 
 class S3Handler:
     
-    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, bucket_name=None):
-        """Initialize S3 handler with AWS credentials."""
-        self.aws_access_key_id = aws_access_key_id or os.environ.get('AWS_DATASETS_ACCESS_KEY_ID')
-        self.aws_secret_access_key = aws_secret_access_key or os.environ.get('AWS_DATASETS_SECRET_ACCESS_KEY')
-        self.bucket_name = bucket_name or os.environ.get('S3_DATASETS_BUCKET_NAME')
+    def __init__(self, bucket_name: Optional[str] = None, s3_client: Optional[boto3.client] = None):
+        # """Initialize S3 handler with AWS credentials."""
+        # self.aws_access_key_id = aws_access_key_id or os.environ.get('AWS_DATASETS_ACCESS_KEY_ID')
+        # self.aws_secret_access_key = aws_secret_access_key or os.environ.get('AWS_DATASETS_SECRET_ACCESS_KEY')
+        # self.bucket_name = bucket_name or os.environ.get('S3_DATASETS_BUCKET_NAME')
         
-        if not self.aws_access_key_id or not self.aws_secret_access_key:
-            raise ValueError("AWS credentials not found")
+        # if not self.aws_access_key_id or not self.aws_secret_access_key:
+        #     raise ValueError("AWS credentials not found")
         
-        if not self.bucket_name:
-            raise ValueError("S3 bucket name not specified")
+        # if not self.bucket_name:
+        #     raise ValueError("S3 bucket name not specified")
         
-        self.s3_client = get_datasets_s3_client()
-    
+        # self.s3_client = get_datasets_s3_client()
+        
+        # self.s3_client = boto3.client('s3')
+        
+        if bucket_name is None:
+            bucket_name = (
+                os.getenv("S3_DATASETS_BUCKET_NAME")
+                or os.getenv("S3_USERS_BUCKET_NAME")
+            )
+        if not bucket_name:
+            raise ValueError("S3 bucket name must be provided or set in env vars")
+
+        # --- store attributes the rest of the class expects -----------------
+        self.bucket_name = bucket_name
+        self.s3_client   = s3_client or boto3.client("s3")  # auto-detect creds
+        
     def list_objects(self, prefix=''):
         """List objects in the S3 bucket with the given prefix."""
         try:

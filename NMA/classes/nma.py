@@ -116,13 +116,13 @@ class NMA:
                 X = dataset_class.x_train
                 y = dataset_class.y_train
             
-            # Now use the WORKING graph building logic from paste-3.txt
             graph = Graph(directed=False)
             graph.add_vertices(self.labels)
             
             edges_data = []
             batch_images = []
-            batch_labels = []
+            true_labels = []
+            original_dataset_positions = [] 
             
             predictor = BatchPredictor(self.model)
             builder = GraphBuilder(self.graph_type, self.infinity)
@@ -131,7 +131,8 @@ class NMA:
                 source_label = y[i]
                 
                 batch_images.append(image)
-                batch_labels.append(source_label)
+                true_labels.append(source_label)
+                original_dataset_positions.append(i)
                 
                 if len(batch_images) == predictor.batch_size or i == len(X) - 1:
                     top_predictions_batch = predictor.get_top_predictions(
@@ -140,17 +141,16 @@ class NMA:
                     
                     added_labels = []
                     for j, top_predictions in enumerate(top_predictions_batch):
-                        current_label = batch_labels[j]
+                        current_label = true_labels[j]
+                        original_index = original_dataset_positions[j]
+                        seen_labels_for_image = {current_label}
                         
                         if len(top_predictions) == 0:
-                            print(top_predictions)
+                            print("Empty predictions for image", original_index)
                             continue
                         
                         if len(top_predictions[0]) < 2:
-                            continue
-                        
-                        if top_predictions[0][1] != current_label:
-                            logger.debug(f"First prediction label '{top_predictions[0][1]}' does not match current label, Skipping.")
+                            print("Malformed predictions for image", original_index)
                             continue
                         
                         if top_predictions[0][2] > self.min_confidence:
@@ -160,10 +160,13 @@ class NMA:
                                 if pred_label not in self.labels:
                                     print(f"Prediction label '{pred_label}' not in graph labels.")
                                     continue
+                                
+                                seen_labels_for_image.add(pred_label)
     
                                 if current_label != pred_label:
                                     edge_data = builder.update_graph(
-                                        graph, current_label, pred_label, pred_prob, i, dataset_class
+                                        # graph, current_label, pred_label, pred_prob, i, dataset_class
+                                        graph, current_label, pred_label, pred_prob, original_index, dataset_class
                                     )
                                     if edge_data is not None:
                                         edges_data.append(edge_data)
@@ -172,13 +175,15 @@ class NMA:
                         # Using the working version's logic for dissimilarity
                         if self.graph_type == "dissimilarity":
                             for label in self.labels:
-                                if label != current_label:
+                                # if label != current_label:
+                                if label not in seen_labels_for_image:                                
                                     builder.add_infinity_edges(
                                         graph, added_labels, label, current_label
                                     )
                 
                     batch_images = []
-                    batch_labels = []
+                    true_labels = []
+                    original_dataset_positions = []
                     
                 # Log progress every 10 batches
                 if (i // batch_size + 1) % 10 == 0:

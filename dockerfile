@@ -1,17 +1,15 @@
-FROM python:3.10-slim
+FROM tensorflow/tensorflow:2.19.0
 
-# Set work directory
 WORKDIR /app
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your code
+# Download NLTK data
+RUN python -c "import nltk; nltk.download('wordnet'); nltk.download('omw-1.4')"
+
+ENV PYTHONUNBUFFERED=1
+ENV NLTK_DATA=/usr/local/nltk_data
+
 COPY . .
 
-# Set environment variables (optional, for unbuffered output)
-ENV PYTHONUNBUFFERED=1
-
-# Default command to run your main.py
 CMD ["python", "main.py"]
