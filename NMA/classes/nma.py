@@ -118,18 +118,16 @@ class NMA:
             
             graph = Graph(directed=False)
             graph.add_vertices(self.labels)
-            
+
             edges_data = []
             batch_images = []
             true_labels = []
             original_dataset_positions = [] 
             
-            predictor = BatchPredictor(self.model)
+            predictor = BatchPredictor(self.model, batch_size)
             builder = GraphBuilder(self.graph_type, self.infinity)
-            
             for i, image in enumerate(X):
                 source_label = y[i]
-                
                 batch_images.append(image)
                 true_labels.append(source_label)
                 original_dataset_positions.append(i)
@@ -139,13 +137,13 @@ class NMA:
                         batch_images, self.labels, self.top_k, self.graph_threshold
                     )
                     
-                    added_labels = []
                     for j, top_predictions in enumerate(top_predictions_batch):
                         current_label = true_labels[j]
                         original_index = original_dataset_positions[j]
                         seen_labels_for_image = {current_label}
                         
                         if len(top_predictions) == 0:
+                            print("Empty predictions for image", original_index)
                             print("Empty predictions for image", original_index)
                             continue
                         
@@ -155,7 +153,10 @@ class NMA:
                         
                         if top_predictions[0][2] > self.min_confidence:
                             filtered_predictions = top_predictions
-                                                        
+
+                            if filtered_predictions[0][1] != current_label:
+                                continue
+                            
                             for _, pred_label, pred_prob in filtered_predictions:
                                 if pred_label not in self.labels:
                                     print(f"Prediction label '{pred_label}' not in graph labels.")
@@ -168,12 +169,12 @@ class NMA:
                                         # graph, current_label, pred_label, pred_prob, i, dataset_class
                                         graph, current_label, pred_label, pred_prob, original_index, dataset_class
                                     )
+                                    # Only append edge_data if it's not None (not a self-loop)
                                     if edge_data is not None:
                                         edges_data.append(edge_data)
-                                        added_labels.append(pred_label)
-                                        
-                        # Using the working version's logic for dissimilarity
-                        if self.graph_type == "dissimilarity":
+                        
+                        # Now add infinity edges for all labels not seen in THIS image
+                        if self.graph_type == GraphTypes.DISSIMILARITY.value:
                             for label in self.labels:
                                 # if label != current_label:
                                 if label not in seen_labels_for_image:                                

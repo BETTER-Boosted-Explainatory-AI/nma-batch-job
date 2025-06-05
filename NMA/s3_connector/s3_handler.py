@@ -1,13 +1,10 @@
-import boto3
 import os
-import importlib.util
 import numpy as np
 from botocore.exceptions import NoCredentialsError, ClientError
-from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
+from NMA.utilss.s3_utils import get_datasets_s3_client
 
 import pickle
 import io
-import sys
 from types import ModuleType
 from typing import Optional
 

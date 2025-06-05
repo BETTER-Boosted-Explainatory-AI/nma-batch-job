@@ -2,7 +2,6 @@ import os
 import time
 import sys
 import logging
-from datetime import datetime
 from contextlib import contextmanager
 from typing import Iterable
 
@@ -14,7 +13,7 @@ from NMA.classes.nma import NMA
 from NMA.services.dataset_service import _get_dataset_config, _load_dataset
 from NMA.services.model_service import _get_model_filename, _load_model
 from NMA.utilss.files_utils import update_current_model
-from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
+from NMA.utilss.s3_utils import get_users_s3_client
 from NMA.services.adversarial_files.adversarial_service import create_logistic_regression_detector
 from NMA.services.ses_batch_service import send_email_notification
 
@@ -180,11 +179,7 @@ def _create_nma(
         else:
             available_readable_labels = list(set(readable_labels[:100]))[:10]
         
-        # init_json = dendro.get_sub_dendrogram_formatted(available_readable_labels)
-        
         create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id)
-        
-        # logger.debug("Initial sub-tree JSON length=%d", len(str(init_json)))
         
         with timed("Update current_model metadata"):
             update_current_model(
