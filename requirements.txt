@@ -8,5 +8,5 @@ python-dotenv
 python-multipart
 python-jose
 boto3
-tensorflow
-keras
+tensorflow==2.18.0 
+keras==3.0.5
