@@ -1,7 +1,5 @@
 
 import os
-# import boto3
-# from fastapi import UploadFile
 import json
 import uuid
 import io
@@ -10,7 +8,6 @@ import tensorflow as tf
 from NMA.utilss.photos_utils import preprocess_numpy_image
 from NMA.classes.user import User
 from NMA.utilss.s3_utils import get_users_s3_client
-# from fastapi import HTTPException
 from datetime import datetime
 import shutil
 import logging

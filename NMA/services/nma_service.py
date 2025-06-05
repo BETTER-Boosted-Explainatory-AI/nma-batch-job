@@ -7,7 +7,6 @@ from contextlib import contextmanager
 from typing import Iterable
 
 import boto3
-from botocore.exceptions import ClientError
 from tqdm import tqdm                           # pip install tqdm
 
 from NMA.utilss.enums.graph_types import GraphTypes

@@ -16,7 +16,6 @@ from NMA.classes.model import Model
 from NMA.classes.dendrogram import Dendrogram
 from NMA.utilss.photos_utils import preprocess_loaded_image
 from NMA.services.dataset_service import get_dataset_labels
-# from fastapi import HTTPException, status
 import json
 from NMA.utilss.enums.datasets_enum import DatasetsEnum
 import shutil

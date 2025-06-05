@@ -16,3 +16,5 @@ def get_users_s3_client():
         aws_access_key_id=os.getenv('AWS_USERS_ACCESS_KEY_ID'),  # This is for users
         aws_secret_access_key=os.getenv('AWS_USERS_SECRET_ACCESS_KEY')  # This is for users
     )
+    
+    
