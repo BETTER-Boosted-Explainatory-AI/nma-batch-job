@@ -5,6 +5,7 @@ import re
 from NMA.utilss.s3_utils import get_datasets_s3_client
 from collections import Counter
 import logging
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -181,7 +182,7 @@ def _find_best_common_hypernym(
     max_senses_per_word: int = 5,
     banned_lemmas: set[str] = None,
     debug: bool = False
-) -> str | None:
+) -> Optional[str]:
     """
     1. For each leaf in `leaves`, fetch up to `max_senses_per_word` synsets.
     2. For EVERY pair of leaves (w1, w2), for EVERY combination of synset ∈ synsets(w1) × synsets(w2),
@@ -278,7 +279,7 @@ def find_common_hypernyms(
     words: list[str],
     abstraction_level: int = 0,
     debug: bool = False
-) -> str | None:
+) -> Optional[str]:
     """
     Improved drop-in replacement for your old `find_common_hypernyms`.
     1. Normalize each word (underscores ↔ spaces, lowercase) and filter out anything containing "Cluster".

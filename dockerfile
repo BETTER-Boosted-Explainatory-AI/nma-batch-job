@@ -1,15 +1,18 @@
 FROM tensorflow/tensorflow:2.18.0
 
+FROM python:3.9-slim
+
 WORKDIR /app
+
+COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download NLTK data
 RUN python -c "import nltk; nltk.download('wordnet'); nltk.download('omw-1.4')"
 
-ENV PYTHONUNBUFFERED=1
-ENV NLTK_DATA=/usr/local/nltk_data
-
 COPY . .
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
 CMD ["python", "main.py"]

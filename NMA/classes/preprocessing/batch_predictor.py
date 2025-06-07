@@ -10,7 +10,8 @@ class BatchPredictor:
         self.buffer_images = []  # To store images
         self.buffer_labels = []  # To store corresponding labels
         self.buffer_results = []  # To store batch results
-
+        self.has_upsampling = self._check_for_upsampling()
+        
     def get_top_predictions(self, X, labels, top_k, graph_threshold):
         # the only change: 
         
