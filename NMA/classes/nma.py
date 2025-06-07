@@ -25,7 +25,7 @@ class NMA:
         top_k=4,
         min_confidence=0.8,
         save_connections=True,
-        batch_size=64,
+        batch_size=16,
     ):
         """
         X: images array,
