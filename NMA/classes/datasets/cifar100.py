@@ -199,30 +199,20 @@
 #     alternatives before raising NoSuchKey.
 
 from __future__ import annotations
-
 import os
 import pickle
 import logging
 from typing import Tuple, List
-
 import numpy as np
 import tensorflow as tf
 from keras.applications.resnet50 import preprocess_input
+from NMA.classes.datasets.dataset import Dataset  
+from NMA.s3_connector.s3_dataset_utils import unpickle_from_s3 
 
-from NMA.classes.datasets.dataset import Dataset  # base class
-from NMA.s3_connector.s3_dataset_utils import unpickle_from_s3  # helper for streaming
-
-# --------------------------------------------------------------
 class Cifar100(Dataset):
-    """CIFAR‑100 loader that produces (224, 224, 3) float32 tensors
-    pre‑processed for ResNet50 / ImageNet models.
-    """
 
-    IMG_SIZE: Tuple[int, int] = (224, 224)
-
-    # ---------- construction -------------------------------------------------
     def __init__(self) -> None:
-        from NMA.services.dataset_service import _get_dataset_config  # late import avoids cycles
+        from NMA.services.dataset_service import _get_dataset_config  
 
         cfg = _get_dataset_config("cifar100")
         super().__init__(
@@ -235,19 +225,10 @@ class Cifar100(Dataset):
         self.x_test: np.ndarray | None = None
         self.y_test: List[str] | None = None
 
-    # ---------- internal helpers -------------------------------------------
-    @staticmethod
-    def _resize_and_preprocess(images: np.ndarray) -> np.ndarray:
-        """Resize uint8 (32,32,3) → float32 (224,224,3) and apply ResNet preprocessing."""
-        images = tf.image.resize(images, Cifar100.IMG_SIZE).numpy().astype("float32")
-        return preprocess_input(images)  # mean‑subtraction, BGR, etc.
-
     def _map_y_labels(self, y: np.ndarray) -> List[str]:
         return [self.label_to_class_name(idx) for idx in y]
 
-    # ---------- public API ---------------------------------------------------
     def load(self, name: str = "cifar100") -> bool:  # retained for backward compat
-        """Load CIFAR‑100 from the default S3 bucket defined by env‑var."""
         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
             raise RuntimeError("S3_DATASETS_BUCKET_NAME env‑var must be set")
@@ -260,19 +241,10 @@ class Cifar100(Dataset):
         return True
 
     def load_from_s3(self, s3_client, bucket: str, prefix: str):
-        """Generic S3 loader used by NMA class.
-
-        The caller may give any of these shapes:
-           • "cifar100"              → we append /train and /test
-           • "cifar100/"             → same as above
-           • "cifar100/train"        → we use that exact key and derive test
-           • "cifar100/train/"       → likewise
-        """
-        # ---- normalise prefix ------------------------------------------------
-        prefix = prefix.rstrip("/")  # strip only trailing slash for easier tests
+        
+        prefix = prefix.rstrip("/")
 
         if prefix.endswith("train"):
-            # Caller already pointed to the train pickle directly
             train_key = prefix
             test_key = prefix[:-5] + "test"  # replace trailing "train" with "test"
         else:
@@ -281,44 +253,37 @@ class Cifar100(Dataset):
 
         self.log.info("Resolved S3 keys: train=%s  test=%s", train_key, test_key)
 
-        # ---- load helper ----------------------------------------------------
         def _unpickle(key: str):
             self.log.debug("Fetching %s …", key)
             resp = s3_client.get_object(Bucket=bucket, Key=key)
             return pickle.load(resp["Body"], encoding="bytes")
 
-        # ---- attempt download ----------------------------------------------
         try:
             train = _unpickle(train_key)
             test = _unpickle(test_key)
         except s3_client.exceptions.NoSuchKey as e:
-            # final fallback: root-level cifar100/train
             fallback_train = "cifar100/train"
             self.log.warning("%s missing – falling back to %s", train_key, fallback_train)
             train = _unpickle(fallback_train)
             test = _unpickle("cifar100/test")
         except Exception:
-            raise  # bubble up other issues
+            raise 
 
         self._process(train, test)
         self.log.info("Loaded CIFAR‑100 (%d train, %d test) from %s", len(self.x_train), len(self.x_test), bucket)
         return self.x_train, self.y_train
 
-    # ---------- core processing --------------------------------------------
     def _process(self, train_pkl: dict, test_pkl: dict) -> None:
         """Common routine used by both load() and load_from_s3()."""
-        # reshape CIFAR pickles (n, 3*32*32) → (n, 32,32,3)
         x_train = train_pkl[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
         x_test = test_pkl[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
 
-        self.x_train = x_train            # keep uint8 32×32
+        self.x_train = x_train          
         self.x_test  = x_test
-        # labels
         self.y_train = self._map_y_labels(np.array(train_pkl[b"fine_labels"]))
         self.y_test = self._map_y_labels(np.array(test_pkl[b"fine_labels"]))
 
-    # ---------- convenience getters -----------------------------------------
-    def label_to_class_name(self, idx: int) -> str:  # wrapper for base‑class mapping
+    def label_to_class_name(self, idx: int) -> str:  
         return self.labels[idx]
 
     def get_train_image_by_id(self, image_id: int):
@@ -332,7 +297,4 @@ class Cifar100(Dataset):
         return self.x_test[image_id], self.y_test[image_id]
 
     def get_label_readable_name(self, label):
-        return label  # Already readable in this dataset
-
-# ---------------------------------------------------------------------------
-# End of file
+        return label  
