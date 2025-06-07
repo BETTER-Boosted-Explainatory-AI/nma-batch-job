@@ -12,6 +12,18 @@ class BatchPredictor:
         self.buffer_results = []  # To store batch results
         self.has_upsampling = self._check_for_upsampling()
         
+    def _check_for_upsampling(self):
+        """Check if the model contains UpSampling2D layers"""
+        for layer in self.model.layers:
+            if isinstance(layer, UpSampling2D):
+                return True
+            # Check nested Sequential models
+            if hasattr(layer, 'layers'):
+                for sublayer in layer.layers:
+                    if isinstance(sublayer, UpSampling2D):
+                        return True
+        return False
+    
     def get_top_predictions(self, X, labels, top_k, graph_threshold):
         # the only change: 
         
