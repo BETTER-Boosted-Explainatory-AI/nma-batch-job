@@ -17,6 +17,7 @@ from NMA.utilss.files_utils import update_current_model
 from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
 from NMA.services.adversarial_files.adversarial_service import create_logistic_regression_detector
 from NMA.services.ses_batch_service import send_email_notification
+# from NMA.classes.user import User
 
 sys.setrecursionlimit(10_000)  
 # --------------------------------------------------------------------------- #

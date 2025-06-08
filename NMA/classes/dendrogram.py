@@ -24,8 +24,8 @@ class Dendrogram:
         self.Z = Z
         self.Z_tree_format = None
         self.dendrogram_filename = dendrogram_filename
-        self.s3_pickle_key = f"{dendrogram_filename}.pkl"
-        self.s3_json_key   = f"{dendrogram_filename}.json"
+        self.s3_pickle_key = f"{dendrogram_filename}/dendrogram.pkl"
+        self.s3_json_key   = f"{dendrogram_filename}/dendrogram.json"
         
     def _build_tree_format(self, node, labels):
         if node.is_leaf():

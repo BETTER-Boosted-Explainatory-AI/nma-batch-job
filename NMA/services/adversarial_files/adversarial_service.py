@@ -13,12 +13,12 @@ def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_
 
 
 
-def create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user):
-    model_info = get_user_models_info(user, model_id)
+def create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id):
+    model_info = get_user_models_info(user_id, model_id)
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+        model_files = get_model_files(user_id, model_info, graph_type)
         model_graph_folder = model_files["model_graph_folder"]
         model_file = model_files["model_file"]
         Z_file = model_files["Z_file"]

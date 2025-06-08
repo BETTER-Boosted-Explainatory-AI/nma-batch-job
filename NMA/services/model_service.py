@@ -293,8 +293,6 @@ def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
         dataset_config["dataset"]
     )
     
-    
-    
 
 
 # ### S3 implementation ### 
@@ -363,11 +361,9 @@ def query_predictions(model_id, graph_type, image, user):
 
 
 # ### S3 implementation ### 
-def get_user_models_info(user, model_id):
+def get_user_models_info(user_id, model_id):
     """Get model info from models.json in S3"""
-    # Assuming user object has a method to get the models.json path in S3
-    # If not, we'll need to construct it
-    s3_models_json_key = f"{user.get_user_folder()}.json"
+    s3_models_json_key = f"{user_id}.json"
     
     if s3_file_exists(S3_BUCKET, s3_models_json_key):
         models_data = read_json_from_s3(S3_BUCKET, s3_models_json_key)
