@@ -21,6 +21,8 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
         model_files = get_model_files(user_id, model_info, graph_type)
         model_graph_folder = model_files["model_graph_folder"]
         model_file = model_files["model_file"]
+        print("model_files", model_files)
+        print("model_files[\"Z_file\"]\"", model_files["Z_file"])
         Z_file = model_files["Z_file"]
         
     adversarial_detector = AdversarialDetector(model_graph_folder)

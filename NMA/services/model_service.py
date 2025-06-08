@@ -363,7 +363,7 @@ def query_predictions(model_id, graph_type, image, user):
 # ### S3 implementation ### 
 def get_user_models_info(user_id, model_id):
     """Get model info from models.json in S3"""
-    s3_models_json_key = f"{user_id}.json"
+    s3_models_json_key = f"{user_id}/models.json"
     
     if s3_file_exists(S3_BUCKET, s3_models_json_key):
         models_data = read_json_from_s3(S3_BUCKET, s3_models_json_key)
@@ -394,12 +394,12 @@ def get_model_info(models_data, model_id):
     return None
 
 ### S3 implementation ### 
-def get_model_files(user_folder: str, model_info: dict, graph_type: str):
+def get_model_files(user_id: str, model_info: dict, graph_type: str):
     """Get model file paths in S3"""
-    logger.info(f"Getting model files for user folder: {user_folder}, model info: {model_info}, graph type: {graph_type}")
+    logger.info(f"Getting model files for user folder: {user_id}, model info: {model_info}, graph type: {graph_type}")
     
     # Construct S3 paths
-    model_subfolder = f"{user_folder}/{model_info['model_id']}"
+    model_subfolder = f"{user_id}/{model_info['model_id']}"
     model_file = f"{model_subfolder}/{model_info['file_name']}"
     
     if not s3_file_exists(S3_BUCKET, model_file):

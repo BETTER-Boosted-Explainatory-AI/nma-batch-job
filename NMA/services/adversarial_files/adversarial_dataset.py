@@ -133,7 +133,7 @@ class AdversarialDataset:
         print("getting preprocess function...")
 
         try:
-            for image in self.clear_images[:50]:
+            for image in self.clear_images[:100]:
                 score = self.score_calculator.calculate_adversarial_score(self.model.predict(image))
                 scores.append(score)
                 labels.append(0)

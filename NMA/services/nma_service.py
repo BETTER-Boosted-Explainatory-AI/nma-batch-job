@@ -137,7 +137,7 @@ def _create_nma(
         # S3 paths for artefacts
         base_prefix = f"{user_id}/{model_id}"
         dataframe_key = f"{base_prefix}/{graph_type}/edges_df.csv"
-        dendrogram_key = f"{base_prefix}/{graph_type}/dendrogram"
+        dendrogram_key = f"{base_prefix}/{graph_type}"
         logger.info("S3 targets → edges: %s | dendrogram: %s", dataframe_key, dendrogram_key)
         
         # Save edges dataframe
