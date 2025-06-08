@@ -50,7 +50,7 @@ class Dendrogram:
             assert_acyclic(self.Z_tree_format)
         except CycleFound as e:
             logger.error("Cycle detected right after building tree: %s", e)
-        raise    
+            raise    
         return self.Z_tree_format  
     
     def filter_dendrogram_by_labels(self, full_data, target_labels):
