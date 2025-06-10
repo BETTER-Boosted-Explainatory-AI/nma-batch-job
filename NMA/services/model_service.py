@@ -340,7 +340,7 @@ def query_predictions(model_id, graph_type, image, user):
     else:
         model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
 
-    dataset = model_info["dataset"]
+    dataset = model_info[dataset]
     labels = get_dataset_labels(dataset)
     model_s3_key = model_files["model_file"]
     

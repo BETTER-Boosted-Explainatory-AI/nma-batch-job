@@ -15,6 +15,9 @@ def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_
 
 def create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id):
     model_info = get_user_models_info(user_id, model_id)
+    
+    print(f"DEBUG: model_info = {model_info}")
+
     if model_info is None:
         raise ValueError(f"Model ID {model_id} not found in models.json")
     else:

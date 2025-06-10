@@ -245,20 +245,20 @@ def user_has_job_running(current_user):
 
 ### S3 implementation ### 
 def update_current_model(user_id, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
-
-    # Extract dataset name if dataset is an object
-    if hasattr(dataset, 'dataset'):
+    
+    
+    if isinstance(dataset, str):
+        dataset_name = dataset
+    elif hasattr(dataset, 'dataset'):
         dataset_name = dataset.dataset
     elif hasattr(dataset, '__class__'):
         dataset_name = dataset.__class__.__name__.lower()
-    else:
-        dataset_name = str(dataset)
-    
+        
     # Create model metadata
     model_metadata = {
         "model_id": model_id,
         "file_name": model_filename,
-        "dataset": dataset_name,
+        "dataset": dataset,
         "graph_type": graph_type,
         "min_confidence": min_confidence,
         "top_k": top_k

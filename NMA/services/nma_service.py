@@ -183,7 +183,6 @@ def _create_nma(
         
         # init_json = dendro.get_sub_dendrogram_formatted(available_readable_labels)
         
-        create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id)
         
         # logger.debug("Initial sub-tree JSON length=%d", len(str(init_json)))
         
@@ -197,6 +196,8 @@ def _create_nma(
                 min_confidence,
                 top_k,
             )
+
+        create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id)
 
         send_email_notification(user_id, model_key, graph_type)
 
