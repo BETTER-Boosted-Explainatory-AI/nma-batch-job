@@ -6,7 +6,7 @@ import boto3
 from botocore.exceptions import ClientError
 logger = logging.getLogger(__name__)
 import io 
-from NMA.utilss.s3_utils import get_users_s3_client
+from utilss.s3_utils import get_users_s3_client
 
 class EdgesDataframe:
     def __init__(self, model_filename, df_filename, edges_df=None):
@@ -29,9 +29,12 @@ class EdgesDataframe:
         try:
             if self.using_s3:
                 # Save to S3
-                if self._s3_file_exists(self.s3_bucket, self.df_filename):
-                    logger.info(f'File already exists in S3, skipping save: s3://{self.s3_bucket}/{self.df_filename}')
-                    return
+                
+                ###  not skipped for debugging 
+                
+                # if self._s3_file_exists(self.s3_bucket, self.df_filename):
+                #     logger.info(f'File already exists in S3, skipping save: s3://{self.s3_bucket}/{self.df_filename}')
+                #     return
                 
                 # Convert DataFrame to CSV in memory
                 csv_buffer = io.StringIO()
@@ -52,9 +55,9 @@ class EdgesDataframe:
                     os.makedirs(directory, exist_ok=True)
                     logger.info(f'Ensured directory exists: {directory}')
                 
-                if os.path.exists(self.df_filename):
-                    logger.info(f'File already exists, skipping save: {self.df_filename}')
-                    return
+                # if os.path.exists(self.df_filename):
+                #     logger.info(f'File already exists, skipping save: {self.df_filename}')
+                #     return
                 
                 self.edges_df.to_csv(self.df_filename, index=False)
                 logger.info(f'Edges dataframe has been saved: {self.df_filename}')

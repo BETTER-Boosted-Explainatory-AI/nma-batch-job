@@ -1,8 +1,8 @@
 import heapq
 import copy
 
-from NMA.utilss.enums.heap_types import HeapType
-from NMA.utilss.enums.graph_types import GraphTypes
+from utilss.enums.heap_types import HeapType
+from utilss.enums.graph_types import GraphTypes
 
 class HeapProcessor:
     def __init__(self,graph, graph_type, labels):

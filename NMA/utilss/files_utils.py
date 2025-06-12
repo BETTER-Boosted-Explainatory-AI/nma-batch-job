@@ -1,24 +1,28 @@
 
 import os
+# import boto3
+# from fastapi import UploadFile
 import json
 import uuid
 import io
 import numpy as np
 import tensorflow as tf
-from NMA.utilss.photos_utils import preprocess_numpy_image
-from NMA.classes.user import User
-from NMA.utilss.s3_utils import get_users_s3_client
+from utilss.photos_utils import preprocess_numpy_image
+from classes.user import User
+from utilss.s3_utils import get_users_s3_client
+# from fastapi import HTTPException
 from datetime import datetime
+import shutil
 import logging
 logger = logging.getLogger(__name__)
 
 def _update_model_metadata(current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id, job_status="submitted"):
-    from NMA.utilss.s3_utils import get_users_s3_client
+    from utilss.s3_utils import get_users_s3_client
     s3_client = get_users_s3_client()
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
     
     user_folder = current_user.get_user_folder()
-    models_json_path = f"{user_folder}/models.json"
+    models_json_path = f"{user_folder}.json"
     
     try:
         response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
@@ -65,7 +69,7 @@ def save_model_metadata(
     job_metadata=None
 ) -> bool:  
     
-    from NMA.utilss.s3_utils import get_users_s3_client
+    from utilss.s3_utils import get_users_s3_client
     s3_client = get_users_s3_client()
         
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
@@ -220,6 +224,24 @@ def load_raw_image(file_path):
     img_example = np.load(file_path)
     return tf.convert_to_tensor(img_example, dtype=tf.float32)
 
+
+
+### original implemetation ###
+# def update_current_model(user, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
+#     """
+#     Update the current model for the user
+#     """
+#     model_metadata = {
+#         "model_id": model_id,
+#         "file_name": model_filename,
+#         "dataset": dataset,
+#         "graph_type": graph_type,
+#         "min_confidence": min_confidence,
+#         "top_k": top_k
+#     }
+
+#     user.set_current_model(model_metadata)
+
 def user_has_job_running(current_user):
     s3_client = get_users_s3_client()
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
@@ -227,7 +249,7 @@ def user_has_job_running(current_user):
         raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
     
     user_folder = current_user.get_user_folder()
-    models_json_path = f"{user_folder}/models.json"
+    models_json_path = f"{user_folder}.json"
     
     try:
         response = s3_client.get_object(Bucket=s3_bucket, Key=models_json_path)
@@ -245,20 +267,31 @@ def user_has_job_running(current_user):
 
 ### S3 implementation ### 
 def update_current_model(user_id, model_id, graph_type, model_filename, dataset, min_confidence, top_k):
+    """
+    Update the current model for a user
     
-    
-    if isinstance(dataset, str):
-        dataset_name = dataset
-    elif hasattr(dataset, 'dataset'):
+    Args:
+        user_id (str): User ID
+        model_id (str): Model ID
+        graph_type (str): Graph type
+        model_filename (str): Model file name
+        dataset (str): Dataset name
+        min_confidence (float): Minimum confidence
+        top_k (int): Top K value
+    """
+    # Extract dataset name if dataset is an object
+    if hasattr(dataset, 'dataset'):
         dataset_name = dataset.dataset
     elif hasattr(dataset, '__class__'):
         dataset_name = dataset.__class__.__name__.lower()
-        
+    else:
+        dataset_name = str(dataset)
+    
     # Create model metadata
     model_metadata = {
         "model_id": model_id,
         "file_name": model_filename,
-        "dataset": dataset,
+        "dataset": dataset_name,
         "graph_type": graph_type,
         "min_confidence": min_confidence,
         "top_k": top_k

@@ -2,15 +2,21 @@ from nltk.corpus import wordnet as wn
 import os
 import boto3
 import re
-from NMA.utilss.s3_utils import get_datasets_s3_client
-from collections import Counter
+from utilss.s3_utils import get_datasets_s3_client
+from collections import deque
+from typing import Dict, Any, Optional
+
+
+## NEW VERSION - 3/6/25
+
+from nltk.corpus import wordnet as wn
+import os
+from utilss.s3_utils import get_datasets_s3_client
+from collections import defaultdict, Counter
 import logging
-from typing import Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-## NEW VERSION - 3/6/25
-
 
 def convert_folder_names_to_readable_labels(dataset_path):
     """
@@ -146,6 +152,8 @@ def get_all_leaf_names(node):
     for child in node["children"]:
         names.extend(get_all_leaf_names(child))
     return names
+    
+
 
 
 def process_hierarchy(hierarchy_data, debug=False):
@@ -155,6 +163,13 @@ def process_hierarchy(hierarchy_data, debug=False):
     return _rename_clusters(hierarchy_data, debug=debug)
 
 
+from nltk.corpus import wordnet as wn
+from itertools import combinations, product
+from collections import Counter
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------
 # Helper: fetch up to `MAX_SENSES` synsets for a phrase
@@ -162,7 +177,7 @@ def process_hierarchy(hierarchy_data, debug=False):
 def _get_top_synsets(
     phrase: str,
     pos=wn.NOUN,
-    max_senses: int = 5
+    max_senses: int = 15
 ) -> list[wn.synset]:
     """
     Return up to `max_senses` synsets for `phrase`.
@@ -210,6 +225,8 @@ def _find_best_common_hypernym(
             if debug:
                 logger.info(f"No synsets found for '{w}'")
 
+        
+        print(syns)
     # If fewer than 2 words have ANY synsets, we cannot get a meaningful common hypernym
     if len(word_to_synsets) < 2:
         if debug:
@@ -290,10 +307,14 @@ def find_common_hypernyms(
         logger.info(f"[find_common_hypernyms] input words: {words}  abstraction_level={abstraction_level}")
 
     clean_leaves = [
-        w.strip().lower().replace(" ", "_")
+        # w.strip().lower().replace(" ", "_")
+        re.sub(r'_\d+$', '', w.strip().lower().replace(" ", "_"))
         for w in words
         if w and "cluster" not in w.lower()
     ]
+    
+    print("clean_leaves",clean_leaves)
+
 
     if debug:
         logger.info(f"Cleaned leaves: {clean_leaves}")
@@ -330,38 +351,102 @@ def find_common_hypernyms(
     # 2+ leaves: use pairwise LCA approach
     return _find_best_common_hypernym(clean_leaves, max_senses_per_word=5, debug=debug)
 
-def _rename_clusters(node, depth=0, used_names=None, all_leaf_names=None, debug=False):
-    if used_names is None:
-        used_names = set()
-    if all_leaf_names is None:
-        all_leaves = get_all_leaf_names(node)
-        all_leaf_names = {n.lower() for n in all_leaves}
-        if debug:
-            logger.info(f"All leaf names: {list(all_leaf_names)[:10]}…")
 
-    # Recurse children first
-    if "children" in node:
-        for i, child in enumerate(node["children"]):
-            node["children"][i] = _rename_clusters(
-                child, depth + 1, used_names, all_leaf_names, debug=debug
-            )
 
-    # If this node’s name still starts with “Cluster”, attempt to rename
-    if "Cluster" in node["name"]:
-        if debug:
-            logger.info(f"Processing cluster: {node['name']}")
+# TODO: FIX - after we got whole, its going bake to placental and not continuing with "whole"
 
-        leaf_names = get_all_leaf_names(node)
-        if not leaf_names:
-            if debug:
-                logger.info("  → no leaves under this cluster, keep name")
-            return node
+# def _rename_clusters(node, depth=0, used_names=None, all_leaf_names=None, debug=False):
+#     if used_names is None:
+#         used_names = set()
+        
+#     if all_leaf_names is None:
+#         all_leaves = get_all_leaf_names(node)
+#         all_leaf_names = {n.lower() for n in all_leaves}
+#         if debug:
+#             logger.info(f"All leaf names: {list(all_leaf_names)[:10]}…")
 
-        # Call the new LCA-based finder (no more abstraction loops)
-        candidate = find_common_hypernyms(leaf_names, debug=debug)
+#     # Recurse children first
+#     if "children" in node:
+#         for i, child in enumerate(node["children"]):
+#             node["children"][i] = _rename_clusters(
+#                 child, depth + 1, used_names, all_leaf_names, debug=debug
+#             )
+
+#     # If this node’s name still starts with “Cluster”, attempt to rename
+#     if "Cluster" in node["name"]:
+#         if debug:
+#             logger.info(f"Processing cluster: {node['name']}")
+
+#         leaf_names = get_all_leaf_names(node)
+#         if not leaf_names:
+#             if debug:
+#                 logger.info("  → no leaves under this cluster, keep name")
+#             return node
+
+
+#         print("leaf_names", leaf_names)
+#         # Call the new LCA-based finder (no more abstraction loops)
+#         candidate = find_common_hypernyms(leaf_names, debug=debug)
+
+#         print("candidate", leaf_names)
+        
+        
+        
+#         if candidate:
+#             # Ensure it doesn’t conflict with actual leaf names or prev used names
+#             base = candidate
+#             unique = base
+#             idx = 1
+#             while unique.lower() in all_leaf_names or unique.lower() in {n.lower() for n in used_names}:
+#                 idx += 1
+#                 unique = f"{base}_{idx}"
+#             node["name"] = unique
+#             used_names.add(unique)
+#             if debug:
+#                 logger.info(f"  → renamed cluster to '{unique}'")
+#         else:
+#             if debug:
+#                 logger.info("  → no good hypernym found, keep 'Cluster …'")
+
+#     return node
+
+
+
+def _rename_clusters(tree, debug=False):
+    """
+    Traverse the tree in BFS manner and rename clusters based on child names,
+    which can be leaves or already-renamed clusters.
+    """
+    used_names = set()
+    all_leaf_names = {leaf.lower() for leaf in get_all_leaf_names(tree)}
+    
+    queue = deque()
+    queue.append(tree)
+
+    # BFS traversal, we store nodes with children in postprocess queue
+    postprocess_nodes = []
+
+    while queue:
+        node = queue.popleft()
+        if "children" in node:
+            queue.extend(node["children"])
+            postprocess_nodes.append(node)  # non-leaf clusters to process after children
+
+    # Process clusters in reverse BFS (bottom-up)
+    for node in reversed(postprocess_nodes):
+        if "Cluster" not in node["name"]:
+            continue  # already renamed
+
+        # Collect child names (renamed or original leaves)
+        child_names = [child["name"] for child in node["children"] if "name" in child]
+        
+        # Get hypernym candidate from child names
+        candidate = find_common_hypernyms(child_names, debug=debug)
+
+        print("candidate", candidate)
 
         if candidate:
-            # Ensure it doesn’t conflict with actual leaf names or prev used names
+            # Ensure it’s unique
             base = candidate
             unique = base
             idx = 1
@@ -371,9 +456,9 @@ def _rename_clusters(node, depth=0, used_names=None, all_leaf_names=None, debug=
             node["name"] = unique
             used_names.add(unique)
             if debug:
-                logger.info(f"  → renamed cluster to '{unique}'")
+                logger.info(f"Renamed cluster {node['id']} to '{unique}'")
         else:
             if debug:
-                logger.info("  → no good hypernym found, keep 'Cluster …'")
+                logger.info(f"No hypernym found for cluster {node['id']} → keeping original name")
 
-    return node
+    return tree

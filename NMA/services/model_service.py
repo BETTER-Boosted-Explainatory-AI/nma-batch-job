@@ -3,18 +3,26 @@ load_dotenv()
 
 import os
 import numpy as np
+import zipfile
+import io
+import boto3
 from botocore.exceptions import ClientError
+from contextlib import contextmanager
 from typing import Dict, Any, Optional
+# import tensorflow_io as tfio  
 import tensorflow as tf 
 import logging
-from NMA.classes.model import Model
-from NMA.classes.dendrogram import Dendrogram
-from NMA.utilss.photos_utils import preprocess_loaded_image
-from NMA.services.dataset_service import get_dataset_labels
+from classes.model import Model
+from classes.dendrogram import Dendrogram
+from utilss.photos_utils import preprocess_loaded_image
+from services.dataset_service import get_dataset_labels
+# from fastapi import HTTPException, status
 import json
-from NMA.utilss.enums.datasets_enum import DatasetsEnum
+from utilss.enums.datasets_enum import DatasetsEnum
+import shutil
+import time
 import tempfile
-from NMA.utilss.s3_utils import get_users_s3_client
+from utilss.s3_utils import get_users_s3_client
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -148,8 +156,7 @@ def _load_model(dataset_str: str, model_path: str, dataset_config: Dict[str, Any
         model = load_model_from_s3(S3_BUCKET, model_path)
         effective_path = f"{S3_BUCKET}/{model_path}"
     
-    print(f"Model {effective_path} has been loaded")
-    
+        
     return Model(
         model, 
         dataset_config["top_k"], 
@@ -293,6 +300,8 @@ def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
         dataset_config["dataset"]
     )
     
+    
+    
 
 
 # ### S3 implementation ### 
@@ -340,7 +349,7 @@ def query_predictions(model_id, graph_type, image, user):
     else:
         model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
 
-    dataset = model_info[dataset]
+    dataset = model_info["dataset"]
     labels = get_dataset_labels(dataset)
     model_s3_key = model_files["model_file"]
     
@@ -361,9 +370,11 @@ def query_predictions(model_id, graph_type, image, user):
 
 
 # ### S3 implementation ### 
-def get_user_models_info(user_id, model_id):
+def get_user_models_info(user, model_id):
     """Get model info from models.json in S3"""
-    s3_models_json_key = f"{user_id}/models.json"
+    # Assuming user object has a method to get the models.json path in S3
+    # If not, we'll need to construct it
+    s3_models_json_key = f"{user.get_user_folder()}.json"
     
     if s3_file_exists(S3_BUCKET, s3_models_json_key):
         models_data = read_json_from_s3(S3_BUCKET, s3_models_json_key)
@@ -394,12 +405,12 @@ def get_model_info(models_data, model_id):
     return None
 
 ### S3 implementation ### 
-def get_model_files(user_id: str, model_info: dict, graph_type: str):
+def get_model_files(user_folder: str, model_info: dict, graph_type: str):
     """Get model file paths in S3"""
-    logger.info(f"Getting model files for user folder: {user_id}, model info: {model_info}, graph type: {graph_type}")
+    logger.info(f"Getting model files for user folder: {user_folder}, model info: {model_info}, graph type: {graph_type}")
     
     # Construct S3 paths
-    model_subfolder = f"{user_id}/{model_info['model_id']}"
+    model_subfolder = f"{user_folder}/{model_info['model_id']}"
     model_file = f"{model_subfolder}/{model_info['file_name']}"
     
     if not s3_file_exists(S3_BUCKET, model_file):

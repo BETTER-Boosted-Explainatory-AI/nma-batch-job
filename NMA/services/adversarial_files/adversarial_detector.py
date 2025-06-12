@@ -6,7 +6,7 @@ import numpy as np
 import logging
 from botocore.exceptions import ClientError
 import io
-from NMA.utilss.s3_utils import get_users_s3_client 
+from utilss.s3_utils import get_users_s3_client 
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)

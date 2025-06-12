@@ -3,10 +3,11 @@ import json
 import uuid
 import boto3
 import io
-from NMA.utilss.s3_utils import get_users_s3_client 
+from utilss.s3_utils import get_users_s3_client 
 
 class User:
     
+
 ### S3 implementation ### 
     def __init__(self, user_id: uuid, email: str, models: list = None):
         self.user_id = user_id if user_id is not None else str(uuid.uuid4())
@@ -22,13 +23,10 @@ class User:
         
         self.users_json_path = "users.json"  # At bucket root
         self.user_folder_path = f"{self.user_id}"  # Just the user ID
-        self.models_json_path = f"{self.user_id}/models.json"
+        self.models_json_path = f"{self.user_id}.json"
         self.current_model_json = f"{self.user_id}/current_model.json"
 
         
-        
-
-
 
 ### S3 implementation ### 
     def create_user(self):
@@ -69,6 +67,8 @@ class User:
             Body=json.dumps({}, indent=4)
         )
 
+
+
 ### S3 implementation ### 
     def load_models(self):
         try:
@@ -88,7 +88,7 @@ class User:
     def get_models_json_path(self):
         return self.models_json_path
     
-
+    
 ### S3 implementation ### 
     def add_model(self, model_info: dict):
         self.models.append(model_info)
@@ -102,7 +102,9 @@ class User:
 
         with open(self.models_json_path, "w") as file:
             json.dump([self.models], file, indent=4)
+            
 
+    
 ### S3 implementation ### 
     def set_current_model(self, model_info: dict):
         self.current_model = model_info
@@ -116,6 +118,8 @@ class User:
         
         return self.current_model
     
+    
+
 
 ### S3 implementation ### 
     def load_current_model(self):
@@ -134,6 +138,7 @@ class User:
     def get_user_folder(self):
         return self.user_folder_path
   
+
     
 ### S3 implementation ### 
     def find_user_in_db(self):

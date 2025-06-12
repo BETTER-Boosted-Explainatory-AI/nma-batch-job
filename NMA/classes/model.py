@@ -13,7 +13,7 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 import tempfile
-from NMA.utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
+from utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
 import io 
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ class Model:
     def model_evaluation(self, x_test, y_test):
         if self.accuracy != -1 & self.loss != -1:
             return self.accuracy
-        batch_size = 16
+        batch_size = 512
         x_test = preprocess_input(x_test)
         y_test = to_categorical(y_test, num_classes=100)
         self.model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
@@ -167,7 +167,7 @@ class Model:
             
             # Now we have the test data locally, proceed with evaluation
             img_height, img_width = 224, 224
-            batch_size = 16
+            batch_size = 32
 
             test_datagen = ImageDataGenerator(preprocessing_function=preprocess_input)
 
@@ -217,7 +217,7 @@ class Model:
         y_test_filtered = y_test[test_mask]
 
         self.model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
-        batch_size = 16 
+        batch_size = 512
         test_fitlered_loss, test_filtered_accuracy = self.model.evaluate(x_test_filtered, y_test_filtered, batch_size=batch_size,verbose=0)
         print(f'selected Labels accuracy: {test_filtered_accuracy:.4f}')
         print(f'selected Labels loss: {test_fitlered_loss:.4f}')

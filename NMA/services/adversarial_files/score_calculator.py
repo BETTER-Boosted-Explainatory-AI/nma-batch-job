@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import boto3
 import os
-from NMA.utilss.s3_utils import get_users_s3_client 
+from utilss.s3_utils import get_users_s3_client 
 
 class ScoreCalculator: 
     def __init__(self, Z_filename, class_names):
