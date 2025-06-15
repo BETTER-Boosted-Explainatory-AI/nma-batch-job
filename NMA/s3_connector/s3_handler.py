@@ -1,9 +1,11 @@
-import boto3
+import dotenv
+dotenv.load_dotenv()
+
 import os
-import importlib.util
 import numpy as np
+import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
-from utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
+from NMA.utilss.s3_utils import get_datasets_s3_client, get_users_s3_client
 
 import pickle
 import io
@@ -12,20 +14,53 @@ from types import ModuleType
 
 class S3Handler:
     
+    # def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, bucket_name=None):
+    #     """Initialize S3 handler with AWS credentials."""
+    #     # self.aws_access_key_id = aws_access_key_id or os.environ.get('AWS_DATASETS_ACCESS_KEY_ID')
+    #     # self.aws_secret_access_key = aws_secret_access_key or os.environ.get('AWS_DATASETS_SECRET_ACCESS_KEY')
+    #     self.bucket_name = bucket_name or os.environ.get('S3_DATASETS_BUCKET_NAME')
+        
+    #     # if not self.aws_access_key_id or not self.aws_secret_access_key:
+    #     #     raise ValueError("AWS credentials not found")
+        
+    #     # if not self.bucket_name:
+    #     #     raise ValueError("S3 bucket name not specified")
+        
+    #     # self.s3_client = get_datasets_s3_client()
+    #     self.s3_client = boto3.client('s3')   
+    
+    
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, bucket_name=None):
-        """Initialize S3 handler with AWS credentials."""
+        """Initialize S3 handler with AWS credentials or IAM role."""
+        # Still accept these parameters for backward compatibility
         self.aws_access_key_id = aws_access_key_id or os.environ.get('AWS_DATASETS_ACCESS_KEY_ID')
         self.aws_secret_access_key = aws_secret_access_key or os.environ.get('AWS_DATASETS_SECRET_ACCESS_KEY')
         self.bucket_name = bucket_name or os.environ.get('S3_DATASETS_BUCKET_NAME')
         
-        if not self.aws_access_key_id or not self.aws_secret_access_key:
-            raise ValueError("AWS credentials not found")
-        
         if not self.bucket_name:
             raise ValueError("S3 bucket name not specified")
         
-        self.s3_client = get_datasets_s3_client()
-    
+        # Try different methods to create s3_client, in order of preference:
+        try:
+            # 1. Try with explicit credentials if provided
+            if self.aws_access_key_id and self.aws_secret_access_key:
+                self.s3_client = boto3.client(
+                    's3',
+                    aws_access_key_id=self.aws_access_key_id,
+                    aws_secret_access_key=self.aws_secret_access_key
+                )
+            else:
+                # 2. Try with default credential provider chain (IAM role)
+                self.s3_client = boto3.client('s3')
+        except Exception as e:
+            print(f"Error creating S3 client with boto3: {str(e)}")
+            try:
+                # 3. Fall back to utility function as last resort
+                self.s3_client = get_datasets_s3_client()
+            except Exception as e2:
+                print(f"Error creating S3 client with get_datasets_s3_client: {str(e2)}")
+                raise ValueError(f"Failed to create S3 client: {str(e2)}")
+             
     def list_objects(self, prefix=''):
         """List objects in the S3 bucket with the given prefix."""
         try:
@@ -109,12 +144,10 @@ class S3Handler:
             
             if images_list:
                 images = np.vstack(images_list)
-                # Reshape to [N, 3, 32, 32] and then transpose to [N, 32, 32, 3]
                 images = images.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
                 labels = np.concatenate(labels_list)
                 return images, labels
         
-        # If no .bin/.pkl files or they didn't work, try with .npy files
         npy_files = [f for f in s3_files if f.endswith('.npy')]
         
         if npy_files:
@@ -137,18 +170,12 @@ class S3Handler:
                         continue
                 
                 if images:
-                    # Stack all images into a single array
                     images_array = np.stack(images)
-                    
-                    # For labels, try to extract from filenames or just use indices
-                    # Assuming no labels are available directly, just use indices
                     labels = np.arange(len(images_array))
                     
                     return images_array, labels
             except Exception as e:
                 print(f"Error processing .npy files: {str(e)}")
-        
-        # If we reached here, no usable data was found
         return np.array([]), np.array([])
     
     def get_cifar100_meta(self):
@@ -179,12 +206,10 @@ class S3Handler:
         prefix = "imagenet/train/"
         all_files = self.list_objects(prefix)
         
-        # Extract class directories (format nXXXXXXXX)
         class_dirs = set()
         for file_path in all_files:
             parts = file_path.replace(prefix, '').split('/')
             if parts and parts[0]:
-                # Only include directories that look like ImageNet synsets (starting with 'n')
                 if parts[0].startswith('n') and len(parts[0]) > 1 and not parts[0].endswith('.txt'):
                     class_dirs.add(parts[0])
         
@@ -193,7 +218,6 @@ class S3Handler:
     def load_python_module_from_s3(self, s3_key):
         """Load a Python module directly from S3 without saving to disk"""
         try:
-            # Get the module content
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=s3_key)
             module_content = response['Body'].read()
             

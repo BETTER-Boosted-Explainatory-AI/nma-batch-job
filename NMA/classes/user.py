@@ -3,7 +3,7 @@ import json
 import uuid
 import boto3
 import io
-from utilss.s3_utils import get_users_s3_client 
+from ..utilss.s3_utils import get_users_s3_client 
 
 class User:
     

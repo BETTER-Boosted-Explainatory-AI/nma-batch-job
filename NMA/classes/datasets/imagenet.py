@@ -7,16 +7,16 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 # from data.datasets.imagenet_info import IMAGENET_INFO
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from s3_connector.s3_dataset_loader import S3DatasetLoader
-from s3_connector.s3_imagenet_loader import S3ImagenetLoader
-from utilss.s3_utils import get_datasets_s3_client
+from NMA.s3_connector.s3_dataset_loader import S3DatasetLoader
+from NMA.s3_connector.s3_imagenet_loader import S3ImagenetLoader
+from NMA.utilss.s3_utils import get_datasets_s3_client
 
 import logging
 logger = logging.getLogger(__name__)
 
 class ImageNet(Dataset):
     def __init__(self):
-        from services.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
         config = _get_dataset_config("imagenet")
 
         super().__init__(config["dataset"], config["threshold"], config["infinity"], config["directory_labels"])
@@ -128,7 +128,7 @@ class ImageNet(Dataset):
 
     
     def load(self, name):
-        from services.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
 
         # 1. pull in your dataset config (for labels, thresholds, etc.)
         config = _get_dataset_config("imagenet")
@@ -184,7 +184,7 @@ class ImageNet(Dataset):
 
 
     def directory_to_labels_conversion(self, label):
-        from services.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
         dir_to_readable = _get_dataset_config("imagenet")["directory_to_readable"]
         return dir_to_readable[label]
     
@@ -199,7 +199,7 @@ class ImageNet(Dataset):
         logger.info(f"Loading ImageNet from S3: {bucket}/{prefix}")
         
         # Ensure we have the directory_labels loaded
-        from services.dataset_service import _get_dataset_config
+        from NMA.services.dataset_service import _get_dataset_config
         config = _get_dataset_config("imagenet")
         
         # Load required attributes if not already loaded
@@ -234,7 +234,7 @@ class ImageNet(Dataset):
         y_train = []
         
         max_classes = 1000 ##  TODO: FIX TO 1000
-        max_images_per_class = 1  ## TODO: FIX TO 10
+        max_images_per_class = 10  ## TODO: FIX TO 10
         
         processed_classes = 0
         for folder in class_folders:

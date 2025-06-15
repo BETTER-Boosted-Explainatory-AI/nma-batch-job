@@ -7,9 +7,9 @@ import uuid
 import io
 import numpy as np
 import tensorflow as tf
-from utilss.photos_utils import preprocess_numpy_image
-from classes.user import User
-from utilss.s3_utils import get_users_s3_client
+from ..utilss.photos_utils import preprocess_numpy_image
+from NMA.classes.user import User
+from ..utilss.s3_utils import get_users_s3_client
 # from fastapi import HTTPException
 from datetime import datetime
 import shutil
@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def _update_model_metadata(current_user, model_id, model_filename, dataset, graph_type, min_confidence, top_k, job_id, job_status="submitted"):
-    from utilss.s3_utils import get_users_s3_client
+    from ..utilss.s3_utils import get_users_s3_client
     s3_client = get_users_s3_client()
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
     
@@ -69,7 +69,7 @@ def save_model_metadata(
     job_metadata=None
 ) -> bool:  
     
-    from utilss.s3_utils import get_users_s3_client
+    from ..utilss.s3_utils import get_users_s3_client
     s3_client = get_users_s3_client()
         
     s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")

@@ -10,3 +10,4 @@ python-jose
 boto3
 tensorflow==2.18.0 
 keras
+Optional

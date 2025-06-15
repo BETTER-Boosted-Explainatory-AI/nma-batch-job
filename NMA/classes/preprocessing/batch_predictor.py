@@ -5,7 +5,7 @@ from tensorflow.keras.layers import UpSampling2D
 
 
 class BatchPredictor:
-    def __init__(self, model, batch_size=512):
+    def __init__(self, model, batch_size=32):
         self.model = model
         self.batch_size = batch_size
         self.buffer_images = []  # To store images

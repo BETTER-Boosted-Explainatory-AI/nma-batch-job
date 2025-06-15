@@ -3,7 +3,7 @@ from NMA.services.nma_service import _create_nma
 from dotenv import load_dotenv
 import sys
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
 sys.stdout.flush()
 sys.stderr.flush()

@@ -7,13 +7,13 @@ from typing import Tuple, List
 import numpy as np
 import tensorflow as tf
 from keras.applications.resnet50 import preprocess_input
-from classes.datasets.dataset import Dataset  
-from s3_connector.s3_dataset_utils import unpickle_from_s3 
+from NMA.classes.datasets.dataset import Dataset  
+from NMA.s3_connector.s3_dataset_utils import unpickle_from_s3 
 
 class Cifar100(Dataset):
 
     def __init__(self) -> None:
-        from services.dataset_service import _get_dataset_config  
+        from NMA.services.dataset_service import _get_dataset_config  
 
         cfg = _get_dataset_config("cifar100")
         super().__init__(
@@ -79,33 +79,33 @@ class Cifar100(Dataset):
         x_train = train_pkl[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
         x_test = test_pkl[b"data"].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)
 
-################################## FOR TESTING ##################################
+# ################################## FOR TESTING ##################################
 
-        y_train_raw = np.array(train_pkl[b"fine_labels"])          # <-- add this
+#         y_train_raw = np.array(train_pkl[b"fine_labels"])          # <-- add this
 
-        # --- tiny-set filter (keep first 5 per class) -----------------------
-        SAMPLES = 1
-        if SAMPLES is not None:
-            idx = np.hstack([np.where(y_train_raw == c)[0][:SAMPLES]   # 0…99 classes
-                            for c in range(100)])
-            x_train     = x_train[idx]
-            y_train_raw = y_train_raw[idx]
-        # -------------------------------------------------------------------
+#         # --- tiny-set filter (keep first 5 per class) -----------------------
+#         SAMPLES = 1
+#         if SAMPLES is not None:
+#             idx = np.hstack([np.where(y_train_raw == c)[0][:SAMPLES]   # 0…99 classes
+#                             for c in range(100)])
+#             x_train     = x_train[idx]
+#             y_train_raw = y_train_raw[idx]
+#         # -------------------------------------------------------------------
 
 
-        self.x_train = x_train          
-        self.x_test  = x_test
-        self.y_train = self._map_y_labels(y_train_raw)
-        self.y_test = self._map_y_labels(np.array(test_pkl[b"fine_labels"]))
+#         self.x_train = x_train          
+#         self.x_test  = x_test
+#         self.y_train = self._map_y_labels(y_train_raw)
+#         self.y_test = self._map_y_labels(np.array(test_pkl[b"fine_labels"]))
 
-################################################################################
+# ################################################################################
 
 ## TODO: uncomment this for NOT testsing 
 
-        # self.x_train = x_train          
-        # self.x_test  = x_test
-        # self.y_train = self._map_y_labels(np.array(train_pkl[b"fine_labels"]))
-        # self.y_test = self._map_y_labels(np.array(test_pkl[b"fine_labels"]))
+        self.x_train = x_train          
+        self.x_test  = x_test
+        self.y_train = self._map_y_labels(np.array(train_pkl[b"fine_labels"]))
+        self.y_test = self._map_y_labels(np.array(test_pkl[b"fine_labels"]))
         
     def label_to_class_name(self, idx: int) -> str:  
         return self.labels[idx]

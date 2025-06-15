@@ -1,5 +1,5 @@
 from scipy.cluster.hierarchy import to_tree
-from utilss.wordnet_utils import process_hierarchy
+from ..utilss.wordnet_utils import process_hierarchy
 import json
 import os
 import numpy as np
@@ -8,7 +8,7 @@ import boto3
 import io
 from botocore.exceptions import ClientError
 import logging
-from utilss.s3_utils import get_users_s3_client
+from ..utilss.s3_utils import get_users_s3_client
 
 logger = logging.getLogger(__name__)
 

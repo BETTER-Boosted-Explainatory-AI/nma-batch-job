@@ -1,20 +1,12 @@
-from nltk.corpus import wordnet as wn
-import os
-import boto3
-import re
-from utilss.s3_utils import get_datasets_s3_client
-from collections import deque
-from typing import Dict, Any, Optional
-
-
 ## NEW VERSION - 3/6/25
 
 from nltk.corpus import wordnet as wn
 import os
-from utilss.s3_utils import get_datasets_s3_client
+from ..utilss.s3_utils import get_datasets_s3_client
 from collections import defaultdict, Counter
 import logging
-
+from typing import Optional
+ 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

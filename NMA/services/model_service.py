@@ -12,17 +12,17 @@ from typing import Dict, Any, Optional
 # import tensorflow_io as tfio  
 import tensorflow as tf 
 import logging
-from classes.model import Model
-from classes.dendrogram import Dendrogram
-from utilss.photos_utils import preprocess_loaded_image
-from services.dataset_service import get_dataset_labels
+from NMA.classes.model import Model
+from NMA.classes.dendrogram import Dendrogram
+from ..utilss.photos_utils import preprocess_loaded_image
+from NMA.services.dataset_service import get_dataset_labels
 # from fastapi import HTTPException, status
 import json
-from utilss.enums.datasets_enum import DatasetsEnum
+from ..utilss.enums.datasets_enum import DatasetsEnum
 import shutil
 import time
 import tempfile
-from utilss.s3_utils import get_users_s3_client
+from ..utilss.s3_utils import get_users_s3_client
 
 # Set up logging
 logger = logging.getLogger(__name__)

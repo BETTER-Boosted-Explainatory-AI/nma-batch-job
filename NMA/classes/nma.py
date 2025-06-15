@@ -1,13 +1,13 @@
 import tensorflow as tf
 import pandas as pd
 from igraph import Graph
-from utilss.enums.heap_types import HeapType
+from ..utilss.enums.heap_types import HeapType
 from .preprocessing.batch_predictor import BatchPredictor
 from .preprocessing.heap_processor import HeapProcessor
 from .preprocessing.graph_builder import GraphBuilder
 from .preprocessing.hierarchical_clustering_builder import HierarchicalClusteringBuilder
 from .preprocessing.z_builder import ZBuilder
-from utilss.enums.graph_types import GraphTypes
+from ..utilss.enums.graph_types import GraphTypes
 import logging
 import boto3
 import os
@@ -25,7 +25,7 @@ class NMA:
         top_k=4,
         min_confidence=0.8,
         save_connections=True,
-        batch_size=512,
+        batch_size=32,
     ):
         """
         X: images array,
@@ -52,7 +52,7 @@ class NMA:
         self.uf = None
         
         # S3 implementation
-        from utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
+        from ..utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
         self.users_s3_client = get_users_s3_client()
         self.datasets_s3_client = get_datasets_s3_client()
         

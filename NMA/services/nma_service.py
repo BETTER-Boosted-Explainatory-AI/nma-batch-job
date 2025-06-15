@@ -128,15 +128,15 @@ import boto3
 from botocore.exceptions import ClientError
 from tqdm import tqdm                           # pip install tqdm
 
-from utilss.enums.graph_types import GraphTypes
-from utilss.enums.datasets_enum import DatasetsEnum
-from classes.dendrogram import Dendrogram
-from classes.edges_dataframe import EdgesDataframe
-from classes.nma import NMA
-from services.dataset_service import _get_dataset_config, _load_dataset
-from services.model_service import _get_model_filename, _load_model
-from utilss.files_utils import update_current_model
-from utilss.s3_utils import  get_users_s3_client
+from ..utilss.enums.graph_types import GraphTypes
+from ..utilss.enums.datasets_enum import DatasetsEnum
+from ..classes.dendrogram import Dendrogram
+from ..classes.edges_dataframe import EdgesDataframe
+from ..classes.nma import NMA
+from NMA.services.dataset_service import _get_dataset_config, _load_dataset
+from NMA.services.model_service import _get_model_filename, _load_model
+from ..utilss.files_utils import update_current_model
+from ..utilss.s3_utils import  get_users_s3_client
 
 
 sys.setrecursionlimit(10_000)  
