@@ -153,6 +153,11 @@ class NMA:
                             print("Malformed predictions for image", original_index)
                             continue
                         
+                        if top_predictions[0][1] != current_label:
+                            logger.debug(f"First prediction label '{top_predictions[0][1]}' does not match current label '{current_label}' for image at index {original_index}. Skipping.")
+                            continue
+                        
+                        
                         if top_predictions[0][2] > self.min_confidence:
                             filtered_predictions = top_predictions
                                                         
@@ -168,10 +173,10 @@ class NMA:
                                         # graph, current_label, pred_label, pred_prob, i, dataset_class
                                         graph, current_label, pred_label, pred_prob, original_index, dataset_class
                                     )
-                                    if edge_data is not None:
+                                    if edge_data is not None:                                        
                                         edges_data.append(edge_data)
                                         added_labels.append(pred_label)
-                                        
+                                                                                
                         # Using the working version's logic for dissimilarity
                         if self.graph_type == "dissimilarity":
                             for label in self.labels:
@@ -197,6 +202,8 @@ class NMA:
             if self.save_connections:
                 self.edges_df = pd.DataFrame(edges_data)
 
+            print("self.save_connections", self.save_connections)
+            
             self.TBD_graph = graph
             heap_processor = HeapProcessor(self.TBD_graph, self.graph_type, self.labels)
             self.heap_processor = heap_processor
@@ -204,6 +211,8 @@ class NMA:
             # Use the working clustering builder
             clustering = HierarchicalClusteringBuilder(heap_processor, self.labels)
             self.Z = ZBuilder.create_z_matrix_from_tree(clustering, self.labels)
+            
+            print("self.Z", self.Z)
             
             logger.info("Preprocessing completed successfully")
                   

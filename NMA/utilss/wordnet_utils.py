@@ -6,6 +6,7 @@ from collections import defaultdict, Counter
 import logging
 from typing import Optional
 import re
+from collections import deque
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -124,9 +125,7 @@ def _find_best_common_hypernym(
             if debug:
                 logger.info(f"No synsets found for '{w}'")
 
-        
-        print(syns)
-    # If fewer than 2 words have ANY synsets, we cannot get a meaningful common hypernym
+            # If fewer than 2 words have ANY synsets, we cannot get a meaningful common hypernym
     if len(word_to_synsets) < 2:
         if debug:
             logger.info("Less than 2 leaves had WordNet synsets → returning None")
@@ -283,7 +282,6 @@ def _rename_clusters(tree, debug=False):
         # Get hypernym candidate from child names
         candidate = find_common_hypernyms(child_names, debug=debug)
 
-        print("candidate", candidate)
 
         if candidate:
             # Ensure it’s unique

@@ -1,9 +1,15 @@
 import os
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
+import tensorflow as tf
+tf.config.run_functions_eagerly(True)
+
+import os
 from NMA.services.nma_service import _create_nma
 from dotenv import load_dotenv
 import sys
 
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 
 sys.stdout.flush()
 sys.stderr.flush()
@@ -22,3 +28,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+    
