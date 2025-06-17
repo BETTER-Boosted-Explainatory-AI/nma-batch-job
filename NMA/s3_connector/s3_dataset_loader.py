@@ -1,7 +1,6 @@
 import os
 import sys
-from typing import Dict, List, Any, Tuple
-import numpy as np
+from typing import List
 from NMA.s3_connector.s3_handler import S3Handler
 from NMA.s3_connector.s3_cifar_loader import S3CifarLoader
 from NMA.s3_connector.s3_imagenet_loader import S3ImagenetLoader
