@@ -28,14 +28,10 @@ class BatchPredictor:
         return False
 
     def get_top_predictions(self, X, labels, top_k, graph_threshold):
-        # the only change: 
         
         if self.has_upsampling:
-            # For models with 3x UpSampling2D (8x total): use 32x32
-            # This gives us 32 * 8 = 256, perfect for ResNet50
             X = tf.image.resize(X, (32, 32))
         else:
-            # For standard models: use 224x224 (ImageNet standard)
             X = tf.image.resize(X, (224, 224))
             
         #################
@@ -45,10 +41,8 @@ class BatchPredictor:
         batch_preds = self.model.predict(np.array(X), verbose=0)
         batch_results = []
         for pred in batch_preds:
-            # Get the top k indices
             top_indices = pred.argsort()[-top_k:][::-1]
 
-            # Filter indices that are within the valid range of your labels
             valid_indices = [i for i in top_indices if i < len(labels)]
 
             top_predictions = [

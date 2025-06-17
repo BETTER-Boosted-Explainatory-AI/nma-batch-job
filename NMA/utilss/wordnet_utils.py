@@ -2,106 +2,13 @@
 
 from nltk.corpus import wordnet as wn
 import os
-from ..utilss.s3_utils import get_datasets_s3_client
 from collections import defaultdict, Counter
 import logging
 from typing import Optional
- 
+import re
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-def convert_folder_names_to_readable_labels(dataset_path):
-    """
-    Convert folder names in S3 to readable labels using WordNet.
-    
-    Parameters:
-    - dataset_path: S3 path in the format 's3://bucket/prefix' or just 'prefix'
-                   (will use S3_USERS_BUCKET_NAME env var)
-    
-    Returns:
-    - readable_labels: List of readable class labels
-    - folder_to_label: Dictionary mapping folder names to readable labels
-    """
-    s3_client = get_datasets_s3_client()
-    
-    if dataset_path.startswith('s3://'):
-        parts = dataset_path.replace('s3://', '').split('/', 1)
-        bucket = parts[0]
-        prefix = parts[1] if len(parts) > 1 else ''
-    else:
-        bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
-        if not bucket:
-            raise ValueError("S3_DATASETS_BUCKET_NAME environment variable is required when not using full s3:// path")
-        prefix = dataset_path
-    
-    if prefix and not prefix.endswith('/'):
-        prefix = prefix + '/'
-    
-    try:
-        s3_client.head_object(Bucket=bucket, Key=prefix)
-    except:
-        # Try listing objects to see if prefix exists as a directory
-        response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix, Delimiter='/', MaxKeys=1)
-        if 'CommonPrefixes' not in response and 'Contents' not in response:
-            raise ValueError(f"Dataset path does not exist in S3: {bucket}/{prefix}")
-    
-    class_names = []
-    
-    paginator = s3_client.get_paginator('list_objects_v2')
-    pages = paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/')
-    
-    for page in pages:
-        if 'CommonPrefixes' in page:
-            for common_prefix in page['CommonPrefixes']:
-                # Extract the directory name from the prefix
-                dir_name = common_prefix['Prefix'].rstrip('/')
-                dir_name = dir_name.split('/')[-1]  # Get the last part of the path
-                
-                # Check if it follows the pattern 'n' followed by digits
-                if dir_name.startswith('n') and dir_name[1:].isdigit():
-                    class_names.append(dir_name)
-    
-    # class_names.sort()
-    
-    if not class_names:
-        raise ValueError(f"No subdirectories found in S3 path {bucket}/{prefix}")
-    
-    # Define special case mapping for disambiguation
-    special_case_mapping = {
-        "n02012849": "crane_bird",       # Crane bird
-        "n03126707": "crane_machine",    # Crane machine
-        "n03710637": "maillot",          # Maillot (swimsuit)
-        "n03710721": "tank_suit"         # Tank suit (different type of swimsuit)
-    }
-    
-    # Create mapping from folder names to readable labels
-    folder_to_label = {}
-    for folder_name in class_names:
-        if folder_name in special_case_mapping:
-            # Use special case mapping for known ambiguous folders
-            readable_label = special_case_mapping[folder_name]
-        elif folder_name.startswith('n'):
-            # Use WordNet utility for standard cases
-            readable_label = WordnetUtils.convert_folder_name_to_label(folder_name)
-        else:
-            readable_label = folder_name
-            
-        folder_to_label[folder_name] = readable_label
-    
-    # Convert original folder names to readable labels while preserving order
-    readable_labels = [folder_to_label[folder_name] for folder_name in class_names]
-    
-    print(f"Sample conversions:")
-    for i in range(min(5, len(class_names))):
-        print(f"{class_names[i]} → {readable_labels[i]}")
-    
-    # Print specific indices for debugging
-    if len(readable_labels) > 638:
-        print(f"Label at index 638: {readable_labels[638]}")
-    if len(readable_labels) > 639:
-        print(f"Label at index 639: {readable_labels[639]}")
-        
-    return readable_labels, folder_to_label
     
     
 def folder_name_to_number(folder_name):
@@ -342,65 +249,6 @@ def find_common_hypernyms(
 
     # 2+ leaves: use pairwise LCA approach
     return _find_best_common_hypernym(clean_leaves, max_senses_per_word=5, debug=debug)
-
-
-
-# TODO: FIX - after we got whole, its going bake to placental and not continuing with "whole"
-
-# def _rename_clusters(node, depth=0, used_names=None, all_leaf_names=None, debug=False):
-#     if used_names is None:
-#         used_names = set()
-        
-#     if all_leaf_names is None:
-#         all_leaves = get_all_leaf_names(node)
-#         all_leaf_names = {n.lower() for n in all_leaves}
-#         if debug:
-#             logger.info(f"All leaf names: {list(all_leaf_names)[:10]}…")
-
-#     # Recurse children first
-#     if "children" in node:
-#         for i, child in enumerate(node["children"]):
-#             node["children"][i] = _rename_clusters(
-#                 child, depth + 1, used_names, all_leaf_names, debug=debug
-#             )
-
-#     # If this node’s name still starts with “Cluster”, attempt to rename
-#     if "Cluster" in node["name"]:
-#         if debug:
-#             logger.info(f"Processing cluster: {node['name']}")
-
-#         leaf_names = get_all_leaf_names(node)
-#         if not leaf_names:
-#             if debug:
-#                 logger.info("  → no leaves under this cluster, keep name")
-#             return node
-
-
-#         print("leaf_names", leaf_names)
-#         # Call the new LCA-based finder (no more abstraction loops)
-#         candidate = find_common_hypernyms(leaf_names, debug=debug)
-
-#         print("candidate", leaf_names)
-        
-        
-        
-#         if candidate:
-#             # Ensure it doesn’t conflict with actual leaf names or prev used names
-#             base = candidate
-#             unique = base
-#             idx = 1
-#             while unique.lower() in all_leaf_names or unique.lower() in {n.lower() for n in used_names}:
-#                 idx += 1
-#                 unique = f"{base}_{idx}"
-#             node["name"] = unique
-#             used_names.add(unique)
-#             if debug:
-#                 logger.info(f"  → renamed cluster to '{unique}'")
-#         else:
-#             if debug:
-#                 logger.info("  → no good hypernym found, keep 'Cluster …'")
-
-#     return node
 
 
 
