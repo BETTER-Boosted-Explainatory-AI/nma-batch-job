@@ -16,7 +16,9 @@ from ..classes.edges_dataframe import EdgesDataframe
 from ..classes.nma import NMA
 from NMA.services.dataset_service import _get_dataset_config, _load_dataset
 from NMA.services.model_service import _get_model_filename, _load_model
-from ..utilss.files_utils import update_current_model
+from NMA.services.adversarial_files.adversarial_service import create_logistic_regression_detector
+from NMA.services.ses_batch_service import send_email_notification
+from ..utilss.files_utils import update_current_model, update_job_status
 from ..utilss.s3_utils import  get_users_s3_client
 
 
@@ -103,6 +105,8 @@ def _create_nma(
     logger.info("🏁 create_nma(): user=%s, model=%s, graph_type=%s, dataset=%s",
                 user_id, model_id, graph_type, dataset)
     
+    update_job_status(user_id, model_id, "running")
+
     try:
         # Model + dataset
         model_key = _get_model_filename(user_id, model_id, graph_type)
@@ -139,8 +143,8 @@ def _create_nma(
         
         # S3 paths for artefacts
         base_prefix = f"{user_id}/{model_id}"
-        dataframe_key = f"{base_prefix}/{graph_type}/edges_df_test.csv"
-        dendrogram_key = f"{base_prefix}/{graph_type}/dendrogram_test"
+        dataframe_key = f"{base_prefix}/{graph_type}/edges_df.csv"
+        dendrogram_key = f"{base_prefix}/{graph_type}/dendrogram"
         logger.info("S3 targets → edges: %s | dendrogram: %s", dataframe_key, dendrogram_key)
         
         # Save edges dataframe
@@ -187,24 +191,26 @@ def _create_nma(
         init_json = dendro.get_sub_dendrogram_formatted(available_readable_labels)
         
         logger.debug("Initial sub-tree JSON length=%d", len(str(init_json)))
+
+        create_logistic_regression_detector(
+            model_id=model_id,
+            graph_type=graph_type,
+            user_id=user_id
+        )
         
         # Update metadata
         with timed("Update current_model metadata"):
-            update_current_model(
-                user_id,
-                model_id,
-                graph_type,
-                os.path.basename(model_key),
-                dataset,
-                min_confidence,
-                top_k,
-            )
+            update_job_status(user_id, model_id, "succeeded")
+
+        send_email_notification(user_id, model_id, graph_type)
 
         logger.info("🎉 create_nma completed in %.2fs", time.perf_counter() - t_global)
         return init_json
 
     except Exception:
         logger.exception("create_nma failed")
+        update_job_status(user_id, model_id, "failed")
+
         raise
 
 
