@@ -8,18 +8,15 @@ class TreeNode(Tree):
         self.node_id = node_id
         self.weight = weight
         self.parent = parent
-        # Update parent references for children
         if children:
             for child in children:
                 if isinstance(child, TreeNode):
                     child.parent = self
 
     def __hash__(self):
-        # Make TreeNode hashable by using node_id for hash
         return hash(self.node_id)
 
     def __eq__(self, other):
-        # Two TreeNodes are equal if they have the same node_id
         if not isinstance(other, TreeNode):
             return False
         return self.node_id == other.node_id
@@ -59,7 +56,6 @@ class TreeNode(Tree):
         if not isinstance(other_node, TreeNode):
             raise TypeError("Expected TreeNode node")
 
-        # Get paths to root for both nodes
         path1 = []
         current = self
         while current is not None:
@@ -72,11 +68,9 @@ class TreeNode(Tree):
             path2.append(current)
             current = current.parent
 
-        # Reverse the paths to start from the root
         path1.reverse()
         path2.reverse()
 
-        # Find the last common node in the paths
         lca = None
         for i in range(min(len(path1), len(path2))):
             if path1[i] is path2[i]:  # Using 'is' for object identity

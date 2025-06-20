@@ -25,7 +25,6 @@ class ImageNet(Dataset):
         self.directory_labels = config["directory_labels"]
         self.s3_loader = S3ImagenetLoader()
         
- 
 
     def load_mini_imagenet(self, dataset_path, img_size=(224, 224)):
         """
@@ -44,56 +43,39 @@ class ImageNet(Dataset):
             split = os.path.basename(dataset_path)
         print(f"Loading mini ImageNet for split: {split} from {dataset_path}")
 
-        # Get all class names from S3
         if split == 'train':
             class_names = self.s3_loader.get_imagenet_classes()
         else:
-            # For test split, we need to handle differently
-            # For now, return empty arrays as in original code
             print(f"Test split loading from S3 not yet implemented")
             return np.array([]), np.array([])
         
         if not class_names:
             raise ValueError(f"No subdirectories found in {dataset_path}")
         
-        # Filter to only valid ImageNet synsets (starting with 'n')
         class_names = [d for d in class_names if d.startswith('n') and len(d) > 1 and d[1:].replace('_', '').isdigit()]
         
-        # Prepare lists to hold images and labels
         images = []
         labels = []
         
-        # Load images from each class
         print(f"Loading images from {len(class_names)} classes...")
         
-        # Use ThreadPoolExecutor for parallel loading
         def load_class_images(class_name):
             class_images = []
             class_labels = []
             
             try:
-                # Get all images for this class
                 image_keys = self.s3_loader.get_class_images(class_name)
-                
-                # Filter only image files
                 img_files = [k for k in image_keys if k.lower().endswith(('.png', '.jpg', '.jpeg'))]
                 
                 for image_key in img_files:
                     try:
-                        # Get image data from S3
                         image_data = self.s3_loader.get_image_data(image_key)
                         if image_data:
-                            # Load image from bytes using PIL
                             img = Image.open(io.BytesIO(image_data))
-                            # Convert to RGB if necessary
                             if img.mode != 'RGB':
                                 img = img.convert('RGB')
-                            # Resize
                             img = img.resize(img_size, Image.Resampling.LANCZOS)
-                            # Convert to array (matching keras img_to_array behavior)
                             img_array = np.array(img, dtype=np.float32)
-                            
-                            # Add to our collections
                             class_images.append(img_array)
                             class_labels.append(class_name)  # Use folder name directly as label
                     except Exception as e:
@@ -104,11 +86,8 @@ class ImageNet(Dataset):
                 print(f"Error loading class {class_name}: {e}")
             return class_images, class_labels
         
-        # Load images with some parallelism for better performance
         with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = {executor.submit(load_class_images, class_name): class_name 
-                      for class_name in class_names}
-            
+            futures = {executor.submit(load_class_images, class_name): class_name for class_name in class_names}
             for future in as_completed(futures):
                 class_name = futures[future]
                 try:
@@ -118,51 +97,25 @@ class ImageNet(Dataset):
                         labels.extend(class_labels)
                 except Exception as e:
                     print(f"Error processing class {class_name}: {e}")
-        
-        # Convert lists to numpy arrays
         images = np.array(images)
         labels = np.array(labels)
-        
         return images, labels
-
 
     
     def load(self, name):
         from NMA.services.dataset_service import _get_dataset_config
-
-        # 1. pull in your dataset config (for labels, thresholds, etc.)
         config = _get_dataset_config("imagenet")
-
-        # 2. make sure the bucket is set
         bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         if not bucket:
             raise RuntimeError("S3_DATASETS_BUCKET_NAME environment variable must be set")
-
-        # 3. create an actual S3 client
         s3_client = get_datasets_s3_client()
-
-        # 4. define the S3 key prefixes (not local paths!)
         train_prefix = f"{name}/train"
-        # test_prefix  = f"{name}/test"
-
-        # 5. load train & test splits via your helper
-        #    note: load_from_s3(self, s3_client, bucket, prefix)
         self.x_train, self.y_train = self.load_from_s3(s3_client, bucket, train_prefix)
-        # self.x_test,  self.y_test  = self.load_from_s3(s3_client, bucket, test_prefix)
-
-        # 6. restore any other config you need
         self.directory_labels = config["directory_labels"]
-
-        # 7. done!
         print(f"Loaded {len(self.x_train)} train images")
 
 
-
     def get_train_image_by_id(self, image_id):
-        # Check if the image_id is within the range of training data
-        # if self.x_train is None or self.y_train is None:
-        #     self.load("imagenet")
-            
         if image_id < len(self.x_train):
             image = self.x_train[image_id]
             label = self.y_train[image_id]
@@ -193,26 +146,17 @@ class ImageNet(Dataset):
     
         
     def load_from_s3(self, s3_client, bucket, prefix):
-        """
-        Load ImageNet dataset from S3 directly using the provided S3 client.
-        """
         logger.info(f"Loading ImageNet from S3: {bucket}/{prefix}")
-        
-        # Ensure we have the directory_labels loaded
         from NMA.services.dataset_service import _get_dataset_config
         config = _get_dataset_config("imagenet")
         
-        # Load required attributes if not already loaded
         if not hasattr(self, 'directory_labels') or not self.directory_labels:
             self.directory_labels = config["directory_labels"]
         
-        # Ensure prefix ends with / for proper directory listing
         if not prefix.endswith('/'):
             prefix = prefix + '/'
         
         logger.info(f"Using prefix: {prefix}")
-        
-        # List all class folders (n01440764/, n01443537/, etc.)
         response = s3_client.list_objects_v2(
             Bucket=bucket,
             Prefix=prefix,
@@ -228,34 +172,24 @@ class ImageNet(Dataset):
             raise ValueError(f"No class folders found at {prefix} in bucket {bucket}")
         
         logger.info(f"Found {len(class_folders)} class folders")
-        
-        # Initialize data lists
         x_train = []
         y_train = []
         
-        max_classes = 1000 ##  TODO: FIX TO 1000
-        max_images_per_class = 10  ## TODO: FIX TO 10
+        max_classes = 1000 
+        max_images_per_class = 10 
         
         processed_classes = 0
         for folder in class_folders:
             if processed_classes >= max_classes:
                 break
-                
-            # Extract folder name (e.g., 'n01440764' from 'imagenet/train/n01440764/')
             folder_name = folder.rstrip('/').split('/')[-1]
-            
-            # Skip non-class folders like 'LOC_synset_mapping.txt' directory
             if not folder_name.startswith('n') or len(folder_name) < 5:
                 continue
-                
-            # Only process folders that exist in our directory_labels
             if folder_name not in self.directory_labels:
                 logger.debug(f"Skipping folder {folder_name} - not in directory_labels")
                 continue
             
             logger.info(f"Processing class folder: {folder_name}")
-            
-            # List images in this class folder
             try:
                 images_response = s3_client.list_objects_v2(
                     Bucket=bucket,
@@ -268,7 +202,6 @@ class ImageNet(Dataset):
                     continue
                 
                 images_processed = 0
-                # Process each image
                 for item in images_response['Contents']:
                     if images_processed >= max_images_per_class:
                         break
@@ -307,7 +240,6 @@ class ImageNet(Dataset):
                 logger.warning(f"Error listing images in {folder}: {str(e)}")
                 continue
         
-        # Convert lists to numpy arrays
         if not x_train:
             logger.error("No images were processed successfully")
             raise ValueError("Failed to load any images from S3")
@@ -315,7 +247,6 @@ class ImageNet(Dataset):
         x_train = np.array(x_train)
         y_train = np.array(y_train)
         
-        # Store in instance variables
         self.x_train = x_train
         self.y_train = y_train
         

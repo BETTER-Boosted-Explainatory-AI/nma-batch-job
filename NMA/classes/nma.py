@@ -51,11 +51,9 @@ class NMA:
         self.Z = None
         self.uf = None
         
-        # S3 implementation
         from ..utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
         self.users_s3_client = get_users_s3_client()
         self.datasets_s3_client = get_datasets_s3_client()
-        
         self.users_s3_bucket = os.getenv("S3_USERS_BUCKET_NAME")
         self.datasets_s3_bucket = os.getenv("S3_DATASETS_BUCKET_NAME")
         
@@ -68,9 +66,8 @@ class NMA:
             self.heap_type = HeapType.MINIMUM.value
         elif graph_type == GraphTypes.SIMILARITY.value or graph_type == GraphTypes.COUNT.value:
             self.heap_type = HeapType.MAXIMUM.value
-    
+
         self.TBD_graph = None
-    
         self._preprocessing(dataset_class, batch_size)
         
     def _get_image_probabilities_by_id(self, image_id):
@@ -82,9 +79,7 @@ class NMA:
     
     def _preprocessing(self, dataset_class, batch_size):
         try:
-            # S3 loading logic
             logger.info("Loading dataset from S3...")
-            
             dataset_class_name = dataset_class.__class__.__name__.lower()
             logger.info(f"Dataset class: {dataset_class_name}")
             
@@ -100,7 +95,6 @@ class NMA:
             
             logger.info(f"Using dataset: {dataset_name}, S3 prefix: {s3_prefix}")
             
-            # Load data from S3
             try:
                 result = dataset_class.load_from_s3(
                     s3_client=self.datasets_s3_client,
@@ -177,7 +171,6 @@ class NMA:
                                         edges_data.append(edge_data)
                                         added_labels.append(pred_label)
                                                                                 
-                        # Using the working version's logic for dissimilarity
                         if self.graph_type == "dissimilarity":
                             for label in self.labels:
                                 # if label != current_label:

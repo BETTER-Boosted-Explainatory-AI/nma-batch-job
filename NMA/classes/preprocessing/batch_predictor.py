@@ -34,7 +34,6 @@ class BatchPredictor:
         else:
             X = tf.image.resize(X, (224, 224))
             
-        #################
         X = preprocess_input(X)           
 
         
