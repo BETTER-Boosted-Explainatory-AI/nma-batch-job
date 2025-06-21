@@ -251,5 +251,5 @@ def update_current_model(user_id, model_id, graph_type, model_filename, dataset,
         logger.info(f"Updated current model for user {user_id}")
         
     except Exception as e:
-        logger.error(f"Error updating current model: {e}")
+        logging.error(f"Error updating job status: {e}")
         raise

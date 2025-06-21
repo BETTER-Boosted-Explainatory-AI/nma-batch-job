@@ -164,8 +164,10 @@ class ImageNet(Dataset):
         )
         
         class_folders = []
-        if 'CommonPrefixes' in response:
-            class_folders = [p['Prefix'] for p in response['CommonPrefixes']]
+        paginator = s3_client.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/'):
+            if 'CommonPrefixes' in page:
+                class_folders.extend([p['Prefix'] for p in page['CommonPrefixes']])
         
         if not class_folders:
             logger.error(f"No class folders found at {prefix} in bucket {bucket}")
