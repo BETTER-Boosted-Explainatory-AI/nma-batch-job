@@ -5,9 +5,6 @@ class GraphBuilder:
     
     def get_infinity(self):
         return self.infinity
-
-    # def get_threshold(self):
-    #     return self.threshold
     
     def create_edge_weight(self, pred_prob):
         if self.graph_type == "dissimilarity":
@@ -34,22 +31,7 @@ class GraphBuilder:
             "target": dataset_class.get_label_readable_name(target_label),
             "target_probability": probability,
         }
-        
         return edge_data
-    
-    
-    # def add_infinity_edges(self, graph, source_label, target_label):
-    #     if target_label == source_label:
-    #         return
-        
-    #     if graph.are_adjacent(source_label, target_label):
-    #         edge_id = graph.get_eid(source_label, target_label)
-    #         graph.es[edge_id]["weight"] += self.infinity
-    #     else:
-    #         graph.add_edge(source_label, target_label, weight=self.infinity) 
-    
-    
-    
     
     def add_infinity_edges(self, graph, infinity_edges_labels, label, source_label):
         if label == source_label:

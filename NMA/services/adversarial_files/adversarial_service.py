@@ -4,13 +4,11 @@ from services.model_service import get_user_models_info, get_model_files
 import logging
 logger = logging.getLogger(__name__)
 
-
 def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> AdversarialDataset:
     logger.info("Creating adversarial dataset")
     adversarial_dataset = AdversarialDataset(Z_file, clean_images, adversarial_images, model_filename, dataset)
     X_train, y_train, X_test, y_test = adversarial_dataset.create_logistic_regression_dataset()
     return {"X_train": X_train, "y_train": y_train, "X_test": X_test, "y_test": y_test}
-
 
 
 def create_logistic_regression_detector(model_id, graph_type, clean_images, adversarial_images, user_id):
@@ -31,6 +29,4 @@ def create_logistic_regression_detector(model_id, graph_type, clean_images, adve
     adversarial_detector = AdversarialDetector(model_graph_folder)
     adversarial_dataset = _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_file, model_info["dataset"])
     adversarial_detector.train_adversarial_detector(adversarial_dataset)
-
     return adversarial_detector
-    

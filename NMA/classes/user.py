@@ -6,9 +6,6 @@ import io
 from ..utilss.s3_utils import get_users_s3_client 
 
 class User:
-    
-
-### S3 implementation ### 
     def __init__(self, user_id: uuid, email: str, models: list = None):
         self.user_id = user_id if user_id is not None else str(uuid.uuid4())
         self.email = email
@@ -27,16 +24,12 @@ class User:
         self.current_model_json = f"{self.user_id}/current_model.json"
 
         
-
-### S3 implementation ### 
     def create_user(self):
-        # Add user information to users.json
         user_data = {
             "id": self.user_id,
             "email": self.email,
         }
 
-        # Check if users.json exists and load it
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.users_json_path)
             users = json.loads(response['Body'].read().decode('utf-8'))
@@ -45,7 +38,6 @@ class User:
         
         users.append(user_data)
         
-        # Write updated users list back to S3
         users_json = json.dumps(users, indent=4)
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
@@ -53,14 +45,12 @@ class User:
             Body=users_json
         )
         
-        # Create empty models.json
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
             Key=self.models_json_path,
             Body=json.dumps([], indent=4)
         )
         
-        # Create empty current_model.json
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
             Key=self.current_model_json,
@@ -68,16 +58,12 @@ class User:
         )
 
 
-
-### S3 implementation ### 
     def load_models(self):
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.models_json_path)
             self.models = json.loads(response['Body'].read().decode('utf-8'))
         except self.s3_client.exceptions.NoSuchKey:
             print(f"No models found for user {self.user_id}")
-
-
 
     def get_user_id(self):
         return self.user_id
@@ -89,11 +75,8 @@ class User:
         return self.models_json_path
     
     
-### S3 implementation ### 
     def add_model(self, model_info: dict):
         self.models.append(model_info)
-        
-        # Write updated models list back to S3
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
             Key=self.models_json_path,
@@ -104,24 +87,16 @@ class User:
             json.dump([self.models], file, indent=4)
             
 
-    
-### S3 implementation ### 
     def set_current_model(self, model_info: dict):
         self.current_model = model_info
-        
-        # Write current model to S3
         self.s3_client.put_object(
             Bucket=self.s3_bucket,
             Key=self.current_model_json,
             Body=json.dumps(self.current_model, indent=4)
         )
-        
         return self.current_model
     
-    
-
-
-### S3 implementation ### 
+     
     def load_current_model(self):
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.current_model_json)
@@ -139,8 +114,6 @@ class User:
         return self.user_folder_path
   
 
-    
-### S3 implementation ### 
     def find_user_in_db(self):
         try:
             response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=self.users_json_path)

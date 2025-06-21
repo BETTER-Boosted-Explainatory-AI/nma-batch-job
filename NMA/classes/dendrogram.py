@@ -9,12 +9,11 @@ import io
 from botocore.exceptions import ClientError
 import logging
 from ..utilss.s3_utils import get_users_s3_client
-
 logger = logging.getLogger(__name__)
-
 S3_BUCKET = os.getenv("S3_USERS_BUCKET_NAME")
 if not S3_BUCKET:
     raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
+
 
 class Dendrogram:
     def __init__(self, dendrogram_filename, Z=None):
@@ -45,58 +44,46 @@ class Dendrogram:
         return self.Z_tree_format  
     
     def filter_dendrogram_by_labels(self, full_data, target_labels):
-        # Check if a node or its descendants contain any of the target labels
         def contains_target_label(node):
-            # If this is a leaf node (no children)
             if 'children' not in node:
                 return node.get('name') in target_labels
             
-            # Check all children
             for child in node.get('children', []):
                 if contains_target_label(child):
                     return True
-            
             return False
         
-        # Create a filtered copy of the tree
         def filter_tree(node):
-            # If this node doesn't contain any target labels in its subtree, skip it
             if not contains_target_label(node):
                 return None
             
-            # Create a new node with the same ID and name
             new_node = {
                 'id': node.get('id'),
                 'name': node.get('name')
             }
             
-            # Copy the value if it exists
             if 'value' in node:
                 new_node['value'] = node.get('value')
             
-            # If it's a leaf node, we're done
             if 'children' not in node:
                 return new_node
             
-            # Process children
             filtered_children = []
             for child in node.get('children', []):
                 filtered_child = filter_tree(child)
                 if filtered_child:
                     filtered_children.append(filtered_child)
-            
-            # Add filtered children if any exist
+                    
             if filtered_children:
                 new_node['children'] = filtered_children
             
             return new_node
         
-        # Start filtering from the root
         return filter_tree(full_data)
 
     def merge_clusters(self, node):
         if node is None:
-            return {"id": 0, "name": "Empty Node"} ## just a temporary fix to check only 10 labels not 1000
+            return {"id": 0, "name": "Empty Node"}
         
         if "children" not in node:
             return node
@@ -107,13 +94,11 @@ class Dendrogram:
             if merged_child:
                 merged_children.append(merged_child)
         
-        # If all children have value 100, merge them into the parent
         if all(c.get("value", 0) == 100 for c in merged_children):
             node["children"] = [grandchild for child in merged_children for grandchild in child.get("children", [])]
         else:
             node["children"] = merged_children
         
-        # If the cluster has only one direct child, remove itself
         if len(node["children"]) == 1:
             return node["children"][0]
         
@@ -126,25 +111,12 @@ class Dendrogram:
         return filtered_tree_json
     
     
-        
-    ### S3 implementation ###   
     def save_dendrogram(self, linkage_matrix=None):
-        """
-        Create dendrogram data and save it to S3
-        
-        Parameters:
-        - linkage_matrix: Optional linkage matrix to save
-        
-        Returns:
-        - Tuple of S3 paths (pickle_path, json_path)
-        """
         try:
-            # Save linkage matrix as pickle if provided
             if linkage_matrix is not None:
                 upload_pickle_to_s3(linkage_matrix, S3_BUCKET, self.s3_pickle_key)
                 print(f"Linkage matrix saved to {S3_BUCKET}/{self.s3_pickle_key}")
             
-            # Save tree format as JSON
             if self.Z_tree_format is not None:
                 upload_json_to_s3(self.Z_tree_format, S3_BUCKET, self.s3_json_key)
                 print(f"Tree format saved to s3://{S3_BUCKET}/{self.s3_json_key}")
@@ -155,12 +127,8 @@ class Dendrogram:
             logger.error(f"Error saving dendrogram to S3: {e}")
             raise
         
-  
-    
-    ### S3 implementation ###   
     def load_dendrogram(self):
         try:
-            # Load linkage matrix from pickle
             if s3_file_exists(S3_BUCKET, self.s3_pickle_key):
                 self.Z = download_pickle_from_s3(S3_BUCKET, self.s3_pickle_key)
                 print(f"Linkage matrix loaded from s3://{S3_BUCKET}/{self.s3_pickle_key}")
@@ -168,16 +136,13 @@ class Dendrogram:
                 print(f"Pickle file not found: s3://{S3_BUCKET}/{self.s3_pickle_key}")
                 self.Z = None
             
-            # Load tree format from JSON
             if s3_file_exists(S3_BUCKET, self.s3_json_key):
                 self.Z_tree_format = download_json_from_s3(S3_BUCKET, self.s3_json_key)
                 print(f"Tree format loaded from s3://{S3_BUCKET}/{self.s3_json_key}")
             else:
                 print(f"JSON file not found: s3://{S3_BUCKET}/{self.s3_json_key}")
                 self.Z_tree_format = None
-            
             return self
-            
         except Exception as e:
             logger.error(f"Error loading dendrogram from S3: {e}")
             raise
@@ -185,41 +150,22 @@ class Dendrogram:
     
     
     def find_name_hierarchy(self, node, target_name):
-        """
-        Recursively search for a target name in the hierarchical structure.
-        
-        Args:
-            node (dict): The current node in the hierarchical structure
-            target_name (str): The name to search for
-        
-        Returns:
-            list: A list of names representing the hierarchy from target to root,
-                or None if the target is not found
-        """
-        # Check if the current node's name matches the target
         if node.get('name') == target_name:
             return [target_name]
         
-        # If the node has children, recursively search through them
         if 'children' in node:
             for child in node['children']:
-                # Recursively search in each child
                 result = self.find_name_hierarchy(child, target_name)
                 
-                # If a path is found, prepend the current node's name
                 if result is not None:
-                    # Only prepend the current node's name if it's a cluster
                     if node.get('name'):
                         result.append(node['name'])
                     return result
-        
-        # If no match is found in this branch
         return None
         
     def rename_cluster(self, cluster_id, new_name):
         print(f"Renaming cluster {cluster_id} to {new_name}")
 
-        # Collect all existing names in the dendrogram
         def collect_names(node, names):
             names.add(node.get('name'))
             for child in node.get('children', []):
@@ -227,12 +173,10 @@ class Dendrogram:
         existing_names = set()
         collect_names(self.Z_tree_format, existing_names)
 
-        # Only rename if the new name does not exist
         if new_name in existing_names:
             print(f"Name '{new_name}' already exists. Rename aborted.")
             return None
 
-        # Find the node by cluster_id
         def find_node(node):
             if node.get('id') == cluster_id:
                 return node
@@ -247,18 +191,15 @@ class Dendrogram:
             print(f"Cluster ID {cluster_id} not found.")
             return None
 
-        # If the node is a leaf (no children), do not rename
         if 'children' not in target_node or not target_node['children']:
             print(f"Cluster ID {cluster_id} is a leaf. Rename aborted.")
             return None
 
-        # Rename the node
         target_node['name'] = new_name
         return self.Z_tree_format
     
     
 def s3_file_exists(bucket_name: str, s3_key: str) -> bool:
-    """Check if a file exists in S3"""
     s3_client = get_users_s3_client() 
     print(f"Checking if file exists in S3: {bucket_name}/{s3_key}")
     try:
@@ -301,7 +242,6 @@ def upload_pickle_to_s3(data, bucket_name: str, s3_key: str):
     """Upload pickle data directly to S3"""
     s3_client = get_users_s3_client() 
     try:
-        # Serialize to bytes
         pickle_bytes = pickle.dumps(data)
         s3_client.put_object(
             Bucket=bucket_name,
