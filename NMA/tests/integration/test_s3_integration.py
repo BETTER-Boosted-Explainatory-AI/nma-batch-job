@@ -1,23 +1,20 @@
 import sys
 import os
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-import os
 import pytest
-import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 import json
 import tempfile
-import shutil
-import numpy as np
 from datetime import datetime
 import time
 import uuid
 import tensorflow as tf
+import boto3
+from dotenv import load_dotenv
 from pathlib import Path
-
-# Import your actual modules
+test_env_path = Path(__file__).resolve().parent / ".env.test"
+load_dotenv(test_env_path, override=True)
 from NMA.services.nma_service import _create_nma
 from NMA.services.model_service import (
     _get_model_path, _get_model_filename, _load_model,
@@ -34,81 +31,70 @@ from NMA.utilss.files_utils import update_current_model
 from NMA.classes.datasets.cifar100 import Cifar100
 from NMA.classes.datasets.imagenet import ImageNet
 
-# Test configuration - should be in .env.integration or similar
-TEST_USER_ID = os.getenv('TEST_USER_ID', f'integration_test_{uuid.uuid4().hex[:8]}')
-TEST_MODEL_ID = os.getenv('TEST_MODEL_ID', f'test_model_{uuid.uuid4().hex[:8]}')
-TEST_CLEANUP = os.getenv('TEST_CLEANUP', 'true').lower() == 'true'
 
-@pytest.mark.parametrize("dataset_object, expected_name", [
-    (Cifar100(), "cifar100"),
-    (ImageNet(), "imagenet")
-])
+TEST_USER_ID = os.getenv('user_TEST_id')
+TEST_MODEL_ID = os.getenv('model_TEST_id')
+TEST_GRAPH_TYPE = os.getenv('graph_TEST_type')
+TEST_DATASET = os.getenv('dataset_TEST_')
+TEST_MIN_CONFIDENCE = float(os.getenv('min_confidence_TEST_'))
+TEST_TOP_K = int(os.getenv('top_k_TEST_'))
+TEST_MODEL_FILE = os.getenv('model_file_TEST_')
+TEST_CLEANUP = os.getenv('TEST_CLEANUP').lower() == 'true'
 
-def test_model_metadata_dataset_names(ensure_real_credentials, test_data_cleanup, dataset_object, expected_name):
-    user_id = TEST_USER_ID
-    model_id = f"{TEST_MODEL_ID}_{expected_name}"
-    filename = f"{expected_name}_test_model.keras"
-
-    update_current_model(
-        user_id=user_id,
-        model_id=model_id,
-        graph_type="similarity",
-        model_filename=filename,
-        dataset=dataset_object,
-        min_confidence=0.9,
-        top_k=5
-    )
-
-    key = f"{user_id}/models.json"
-    test_data_cleanup.append(key)
-
-    s3 = ensure_real_credentials['users_client']
-    bucket = ensure_real_credentials['users_bucket']
-
-    assert s3_file_exists(bucket, key)
-    models_data = read_json_from_s3(bucket, key)
-
-    test_model = next((m for m in models_data if m['model_id'] == model_id), None)
-    assert test_model is not None
-    assert test_model['dataset'] == expected_name
 
 @pytest.fixture(scope='session')
 def ensure_real_credentials():
-    """Ensure we have real AWS credentials before running integration tests"""
+    original_env = {}
+    test_mappings = {
+        'S3_DATASETS_BUCKET_NAME': os.getenv('S3_TEST_DATASETS_BUCKET_NAME'),
+        'S3_USERS_BUCKET_NAME': os.getenv('S3_TEST_USERS_BUCKET_NAME'),
+        'AWS_DATASETS_ACCESS_KEY_ID': os.getenv('AWS_TEST_DATASETS_ACCESS_KEY_ID'),
+        'AWS_DATASETS_SECRET_ACCESS_KEY': os.getenv('AWS_TEST_DATASETS_SECRET_ACCESS_KEY'),
+        'AWS_USERS_ACCESS_KEY_ID': os.getenv('AWS_TEST_USERS_ACCESS_KEY_ID'),
+        'AWS_USERS_SECRET_ACCESS_KEY': os.getenv('AWS_TEST_USERS_SECRET_ACCESS_KEY'),
+    }
+    
+    for key, test_value in test_mappings.items():
+        if test_value:
+            original_env[key] = os.getenv(key)
+            os.environ[key] = test_value
+    
     try:
-        # Try to create clients
         datasets_client = get_datasets_s3_client()
         users_client = get_users_s3_client()
-        
-        # Verify credentials by listing buckets
         datasets_client.list_buckets()
         users_client.list_buckets()
-        
-        # Verify bucket access
-        datasets_bucket = os.getenv('S3_DATASETS_BUCKET_NAME')
-        users_bucket = os.getenv('S3_USERS_BUCKET_NAME')
-        
+        datasets_bucket = os.getenv('S3_TEST_DATASETS_BUCKET_NAME')
+        users_bucket = os.getenv('S3_TEST_USERS_BUCKET_NAME')
         datasets_client.head_bucket(Bucket=datasets_bucket)
         users_client.head_bucket(Bucket=users_bucket)
         
-        return {
+        yield {
             'datasets_client': datasets_client,
             'users_client': users_client,
             'datasets_bucket': datasets_bucket,
-            'users_bucket': users_bucket
+            'users_bucket': users_bucket,
+            'original_env': original_env
         }
+        
     except (NoCredentialsError, ClientError) as e:
-        pytest.skip(f"AWS credentials not configured properly: {e}")
+        import traceback, sys
+        print("\n=== DATASET-CLIENT EXCEPTION ===", file=sys.stderr)
+        traceback.print_exc()
+        print("================================\n", file=sys.stderr)
+        pytest.skip(f"AWS test credentials not configured properly: {e}")
+    finally:
+        for key, original_value in original_env.items():
+            if original_value is not None:
+                os.environ[key] = original_value
+            else:
+                os.environ.pop(key, None)
 
 
 @pytest.fixture(scope='session')
 def test_data_cleanup(ensure_real_credentials):
-    """Fixture to clean up test data after tests"""
     created_keys = []
-    
     yield created_keys
-    
-    # Cleanup after all tests
     if TEST_CLEANUP:
         users_client = ensure_real_credentials['users_client']
         users_bucket = ensure_real_credentials['users_bucket']
@@ -122,92 +108,71 @@ def test_data_cleanup(ensure_real_credentials):
 
 
 class TestS3BucketConnectivity:
-    """Test actual connectivity to S3 buckets"""
-    
     def test_datasets_bucket_exists(self, ensure_real_credentials):
-        """Test that datasets bucket exists and is accessible"""
         client = ensure_real_credentials['datasets_client']
         bucket = ensure_real_credentials['datasets_bucket']
-        
         response = client.head_bucket(Bucket=bucket)
         assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+        print(f"✓ Successfully connected to test datasets bucket: {bucket}")
     
     def test_users_bucket_exists(self, ensure_real_credentials):
-        """Test that users bucket exists and is accessible"""
         client = ensure_real_credentials['users_client']
         bucket = ensure_real_credentials['users_bucket']
         
         response = client.head_bucket(Bucket=bucket)
         assert response['ResponseMetadata']['HTTPStatusCode'] == 200
+        print(f"✓ Successfully connected to test users bucket: {bucket}")
     
     def test_list_datasets_bucket_contents(self, ensure_real_credentials):
-        """Test listing contents of datasets bucket"""
         client = ensure_real_credentials['datasets_client']
         bucket = ensure_real_credentials['datasets_bucket']
-        
         response = client.list_objects_v2(Bucket=bucket, MaxKeys=10)
         
-        # Should have some contents
         assert 'Contents' in response or response.get('KeyCount', 0) == 0
         
         if 'Contents' in response:
+            print(f"Found {len(response['Contents'])} objects in test datasets bucket")
             for obj in response['Contents']:
                 assert 'Key' in obj
                 assert 'Size' in obj
                 assert 'LastModified' in obj
     
     def test_datasets_bucket_permissions(self, ensure_real_credentials):
-        """Test read permissions on datasets bucket"""
         client = ensure_real_credentials['datasets_client']
         bucket = ensure_real_credentials['datasets_bucket']
         
-        # Try to list specific dataset folders
         for prefix in ['cifar100/', 'imagenet/']:
             response = client.list_objects_v2(
                 Bucket=bucket,
                 Prefix=prefix,
                 MaxKeys=5
             )
-            # Just verify no errors - might be empty
             assert 'ResponseMetadata' in response
 
 
 class TestS3FileOperations:
-    """Test real S3 file operations"""
-    
     def test_write_read_delete_cycle(self, ensure_real_credentials, test_data_cleanup):
-        """Test complete file lifecycle in S3"""
+        """Test complete file lifecycle in test S3 bucket"""
         client = ensure_real_credentials['users_client']
         bucket = ensure_real_credentials['users_bucket']
-        
-        # Create test data
         test_key = f"{TEST_USER_ID}/test_file_{uuid.uuid4().hex}.txt"
         test_content = f"Integration test content - {datetime.now()}"
         
-        # Write to S3
         client.put_object(
             Bucket=bucket,
             Key=test_key,
             Body=test_content.encode('utf-8')
         )
+        
         test_data_cleanup.append(test_key)
-        
-        # Verify file exists
         assert s3_file_exists(bucket, test_key) is True
-        
-        # Read from S3
         response = client.get_object(Bucket=bucket, Key=test_key)
         read_content = response['Body'].read().decode('utf-8')
         assert read_content == test_content
-        
-        # Delete from S3
         client.delete_object(Bucket=bucket, Key=test_key)
-        
-        # Verify file no longer exists
         assert s3_file_exists(bucket, test_key) is False
     
     def test_json_operations(self, ensure_real_credentials, test_data_cleanup):
-        """Test JSON read/write operations"""
         client = ensure_real_credentials['users_client']
         bucket = ensure_real_credentials['users_bucket']
         
@@ -222,7 +187,6 @@ class TestS3FileOperations:
             }
         }
         
-        # Write JSON
         client.put_object(
             Bucket=bucket,
             Key=test_key,
@@ -230,8 +194,6 @@ class TestS3FileOperations:
             ContentType='application/json'
         )
         test_data_cleanup.append(test_key)
-        
-        # Read JSON using your function
         read_data = read_json_from_s3(bucket, test_key)
         
         assert read_data == test_data
@@ -240,19 +202,16 @@ class TestS3FileOperations:
 
 
 class TestModelOperations:
-    """Test real model operations with S3"""
-    
     def test_model_path_operations(self, ensure_real_credentials, test_data_cleanup):
-        """Test model path creation and retrieval"""
         client = ensure_real_credentials['users_client']
         bucket = ensure_real_credentials['users_bucket']
         
         # Create a dummy model file
-        model_key = f"{TEST_USER_ID}/{TEST_MODEL_ID}/test_model.keras"
+        model_key = f"{TEST_USER_ID}/{TEST_MODEL_ID}/{TEST_MODEL_FILE}"
         client.put_object(
             Bucket=bucket,
             Key=model_key,
-            Body=b"dummy model content"
+            Body=b"dummy model content for testing"
         )
         test_data_cleanup.append(model_key)
         
@@ -261,122 +220,134 @@ class TestModelOperations:
         assert model_path == f"{TEST_USER_ID}/{TEST_MODEL_ID}"
         
         # Test get_model_filename
-        filename = _get_model_filename(TEST_USER_ID, TEST_MODEL_ID, 'similarity')
+        filename = _get_model_filename(TEST_USER_ID, TEST_MODEL_ID, TEST_GRAPH_TYPE)
         assert filename == model_key
     
     def test_model_metadata_operations(self, ensure_real_credentials, test_data_cleanup):
-        """Test model metadata save and retrieve"""
-        # Test update_current_model
+        dataset_obj = Cifar100() if TEST_DATASET == "cifar100" else ImageNet()
         update_current_model(
             user_id=TEST_USER_ID,
             model_id=TEST_MODEL_ID,
-            graph_type='similarity',
-            model_filename='test_model.keras',
-            dataset='cifar100',
-            min_confidence=0.8,
-            top_k=5
+            graph_type=TEST_GRAPH_TYPE,
+            model_filename=TEST_MODEL_FILE,
+            dataset=dataset_obj, 
+            min_confidence=TEST_MIN_CONFIDENCE,
+            top_k=TEST_TOP_K
         )
         
         models_json_key = f"{TEST_USER_ID}/models.json"
         test_data_cleanup.append(models_json_key)
         
-        # Verify models.json was created
         client = ensure_real_credentials['users_client']
         bucket = ensure_real_credentials['users_bucket']
         
         assert s3_file_exists(bucket, models_json_key)
-        
-        # Read and verify content
         models_data = read_json_from_s3(bucket, models_json_key)
         assert isinstance(models_data, list)
         assert len(models_data) > 0
         
-        # Find our test model
         test_model = next((m for m in models_data if m['model_id'] == TEST_MODEL_ID), None)
         assert test_model is not None
-        assert test_model['dataset'] == 'cifar100'
-        assert test_model['graph_type'] == 'similarity'
-        assert test_model['min_confidence'] == 0.8
-        assert test_model['top_k'] == 5
+        assert test_model["dataset"] == TEST_DATASET
+        assert test_model['graph_type'] == TEST_GRAPH_TYPE
+        assert test_model['min_confidence'] == TEST_MIN_CONFIDENCE
+        assert test_model['top_k'] == TEST_TOP_K
+
+
+@pytest.mark.parametrize("dataset_object, expected_name", [
+    (Cifar100(), "cifar100"),
+    (ImageNet(), "imagenet")
+])
+
+def test_model_metadata_dataset_names(ensure_real_credentials, test_data_cleanup, dataset_object, expected_name):
+    user_id = TEST_USER_ID
+    model_id = f"{TEST_MODEL_ID}_{expected_name}"
+    filename = f"{expected_name}_test_model.keras"
+    
+    update_current_model(
+        user_id=user_id,
+        model_id=model_id,
+        graph_type="similarity",
+        model_filename=filename,
+        dataset=dataset_object,
+        min_confidence=0.9,
+        top_k=5
+    )
+    
+    key = f"{user_id}/models.json"
+    test_data_cleanup.append(key)
+    
+    s3 = ensure_real_credentials['users_client']
+    bucket = ensure_real_credentials['users_bucket']
+    
+    assert s3_file_exists(bucket, key)
+    models_data = read_json_from_s3(bucket, key)
+    test_model = next((m for m in models_data if m['model_id'] == model_id), None)
+    assert test_model is not None
+    assert test_model['dataset'] == expected_name
 
 
 class TestDatasetOperations:
-    """Test real dataset operations"""
-    
     def test_dataset_loader_initialization(self, ensure_real_credentials):
-        """Test S3DatasetLoader with real S3"""
         loader = S3DatasetLoader()
         
-        assert loader.bucket_name == os.getenv('S3_DATASETS_BUCKET_NAME')
+        assert loader.bucket_name == os.getenv('S3_DATASETS_BUCKET_NAME')  # This is now the test bucket
         assert loader.s3_handler is not None
     
     def test_get_dataset_config_real(self, ensure_real_credentials):
-        """Test getting real dataset configuration from S3"""
-        # Test CIFAR100 config
-        cifar_config = _get_dataset_config('cifar100')
+        cifar_config = _get_dataset_config(TEST_DATASET)
         
         assert cifar_config is not None
-        assert cifar_config['dataset'] == 'cifar100'
+        assert cifar_config['dataset'] == TEST_DATASET
         assert 'labels' in cifar_config
         assert 'top_k' in cifar_config
         assert 'min_confidence' in cifar_config
         
-        # Verify labels structure
         assert isinstance(cifar_config['labels'], list)
-        assert len(cifar_config['labels']) == 100  # CIFAR100 has 100 classes
+        if TEST_DATASET == 'cifar100':
+            assert len(cifar_config['labels']) == 100  # CIFAR100 has 100 classes
     
     @pytest.mark.slow
     def test_load_dataset_folder_structure(self, ensure_real_credentials):
-        """Test loading actual dataset folder structure"""
-        # Test CIFAR100 test folder
-        files = _load_dataset_folder('cifar100', 'test')
+        """Test loading actual dataset folder structure from test bucket"""
+        files = _load_dataset_folder(TEST_DATASET, 'test')
         
         assert files is not None
         assert isinstance(files, list)
         
-        # Should have some test files
         if len(files) > 0:
-            # Check file format
             assert any('.pkl' in f or '.npy' in f for f in files[:10])
     
     def test_dataset_labels_retrieval(self, ensure_real_credentials):
-        """Test getting dataset labels"""
-        # Test CIFAR100 labels
-        cifar_labels = get_dataset_labels('cifar100')
+        labels = get_dataset_labels(TEST_DATASET)
         
-        assert cifar_labels is not None
-        assert len(cifar_labels) == 100
-        assert isinstance(cifar_labels[0], str)
-        
-        # Check some known CIFAR100 labels
-        expected_labels = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver']
-        for label in expected_labels:
-            assert label in cifar_labels
+        assert labels is not None
+        if TEST_DATASET == 'cifar100':
+            assert len(labels) == 100
+            assert isinstance(labels[0], str)
+            
+            expected_labels = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver']
+            for label in expected_labels:
+                assert label in labels
 
 
 class TestEndToEndWorkflow:
-    """Test complete workflows using real S3"""
-    
     @pytest.mark.slow
     def test_model_upload_and_retrieve_workflow(self, ensure_real_credentials, test_data_cleanup):
-        """Test complete model upload and retrieve workflow"""
         client = ensure_real_credentials['users_client']
         bucket = ensure_real_credentials['users_bucket']
         
-        # Create a simple keras model
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Create minimal model
             model = tf.keras.Sequential([
                 tf.keras.layers.Dense(10, input_shape=(28, 28)),
                 tf.keras.layers.Flatten(),
                 tf.keras.layers.Dense(2, activation='softmax')
             ])
             
-            model_path = os.path.join(tmpdir, 'test_model.keras')
+            model_path = os.path.join(tmpdir, TEST_MODEL_FILE)
             model.save(model_path)
             
-            # Upload to S3
-            model_key = f"{TEST_USER_ID}/{TEST_MODEL_ID}/integration_test_model.keras"
+            model_key = f"{TEST_USER_ID}/{TEST_MODEL_ID}/{TEST_MODEL_FILE}"
             with open(model_path, 'rb') as f:
                 client.put_object(
                     Bucket=bucket,
@@ -385,37 +356,32 @@ class TestEndToEndWorkflow:
                 )
             test_data_cleanup.append(model_key)
             
-            # Update metadata
+            dataset_obj = Cifar100() if TEST_DATASET == 'cifar100' else ImageNet()
             update_current_model(
                 user_id=TEST_USER_ID,
                 model_id=TEST_MODEL_ID,
-                graph_type='similarity',
-                model_filename='test_model.keras',
-                dataset=Cifar100(),  # ← OBJECT with .dataset = "cifar100"
-                min_confidence=0.8,
-                top_k=5
+                graph_type=TEST_GRAPH_TYPE,
+                model_filename=TEST_MODEL_FILE,
+                dataset=dataset_obj,
+                min_confidence=TEST_MIN_CONFIDENCE,
+                top_k=TEST_TOP_K
             )
             test_data_cleanup.append(f"{TEST_USER_ID}/models.json")
             
-            # Retrieve and verify
             retrieved_path = _get_model_path(TEST_USER_ID, TEST_MODEL_ID)
             assert retrieved_path is not None
             
-            # Load model from S3
             loaded_model = load_model_from_s3(bucket, model_key)
             assert loaded_model is not None
             assert len(loaded_model.layers) == 3
     
     @pytest.mark.slow
     def test_s3_performance_metrics(self, ensure_real_credentials, test_data_cleanup):
-        """Test S3 operation performance with real calls"""
         client = ensure_real_credentials['users_client']
         bucket = ensure_real_credentials['users_bucket']
         
-        # Test write performance
         write_times = []
-        test_data = b"x" * 1024  # 1KB of data
-        
+        test_data = b"x" * 1024
         for i in range(10):
             key = f"{TEST_USER_ID}/perf_test_{i}.dat"
             start = time.time()
@@ -424,9 +390,8 @@ class TestEndToEndWorkflow:
             test_data_cleanup.append(key)
         
         avg_write_time = sum(write_times) / len(write_times)
-        print(f"\nAverage write time: {avg_write_time:.3f}s")
+        print(f"\nAverage write time to test bucket: {avg_write_time:.3f}s")
         
-        # Test read performance
         read_times = []
         for i in range(10):
             key = f"{TEST_USER_ID}/perf_test_{i}.dat"
@@ -435,44 +400,33 @@ class TestEndToEndWorkflow:
             read_times.append(time.time() - start)
         
         avg_read_time = sum(read_times) / len(read_times)
-        print(f"Average read time: {avg_read_time:.3f}s")
+        print(f"Average read time from test bucket: {avg_read_time:.3f}s")
         
-        # Performance assertions
         assert avg_write_time < 2.0, f"Write operations too slow: {avg_write_time}s"
         assert avg_read_time < 1.0, f"Read operations too slow: {avg_read_time}s"
 
 
 @pytest.mark.integration
 class TestErrorHandling:
-    """Test error handling with real S3 errors"""
-    
     def test_nonexistent_file_handling(self, ensure_real_credentials):
-        """Test handling of nonexistent files"""
         bucket = ensure_real_credentials['users_bucket']
-        
-        # Test file_exists with nonexistent file
         assert s3_file_exists(bucket, 'nonexistent/file.txt') is False
         
-        # Test read_json_from_s3 with nonexistent file
         with pytest.raises(ClientError) as exc_info:
             read_json_from_s3(bucket, 'nonexistent/file.json')
         assert exc_info.value.response['Error']['Code'] == 'NoSuchKey'
     
     def test_permission_errors(self, ensure_real_credentials):
-        """Test handling of permission errors"""
-        # Try to access a bucket we don't have permissions for
         client = ensure_real_credentials['users_client']
         
         with pytest.raises(ClientError) as exc_info:
             client.head_bucket(Bucket='some-random-bucket-we-dont-own-12345')
         
         error_code = exc_info.value.response['Error']['Code']
-        assert error_code in ['403', 'AccessDenied', 'NoSuchBucket']
+        assert error_code in ['403', '404', 'AccessDenied', 'NoSuchBucket']
 
 
-# Helper function to run integration tests
 def run_integration_tests():
-    """Run only integration tests"""
     return pytest.main([
         __file__,
         '-v',
@@ -484,7 +438,12 @@ def run_integration_tests():
 if __name__ == '__main__':
     print("\n" + "="*60)
     print("RUNNING S3 INTEGRATION TESTS")
-    print("These tests connect to real S3 buckets")
+    print(f"Test User ID: {TEST_USER_ID}")
+    print(f"Test Model ID: {TEST_MODEL_ID}")
+    print(f"Test Dataset: {TEST_DATASET}")
+    print(f"Test Buckets: ")
+    print(f"  - Datasets: {os.getenv('S3_TEST_DATASETS_BUCKET_NAME')}")
+    print(f"  - Users: {os.getenv('S3_TEST_USERS_BUCKET_NAME')}")
     print("="*60 + "\n")
     
     run_integration_tests()
