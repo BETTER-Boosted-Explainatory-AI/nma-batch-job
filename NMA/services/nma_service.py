@@ -2,13 +2,9 @@ import os
 import time
 import sys
 import logging
-from datetime import datetime
 from contextlib import contextmanager
 from typing import Iterable
-
-import boto3
-from botocore.exceptions import ClientError
-from tqdm import tqdm                          
+                       
 from ..utilss.enums.graph_types import GraphTypes
 from ..utilss.enums.datasets_enum import DatasetsEnum
 from ..classes.dendrogram import Dendrogram
@@ -18,7 +14,7 @@ from NMA.services.dataset_service import _get_dataset_config, _load_dataset
 from NMA.services.model_service import _get_model_filename, _load_model
 from NMA.services.adversarial_files.adversarial_service import create_logistic_regression_detector
 from NMA.services.ses_batch_service import send_email_notification
-from ..utilss.files_utils import update_current_model, update_job_status
+from ..utilss.files_utils import update_job_status
 from ..utilss.s3_utils import  get_users_s3_client
 
 
@@ -109,6 +105,16 @@ def _create_nma(
 
     try:
         # Model + dataset
+        dataset_cfg = _get_dataset_config(dataset)
+        
+        with timed("Load dataset"):
+            dataset_obj = _load_dataset(dataset)
+           
+        # Use ORIGINAL WordNet labels (folder names) throughout processing
+        labels = dataset_obj.directory_labels if dataset == DatasetsEnum.IMAGENET.value else dataset_obj.labels
+        
+        logger.info("Dataset loaded – %d samples, %d labels", iterable_length(dataset_obj) or -1, len(labels))
+
         model_key = _get_model_filename(user_id, model_id, graph_type)
         if not model_key:
             raise ValueError("Could not resolve model key for S3")
@@ -116,19 +122,9 @@ def _create_nma(
         model_uri = f"s3://{S3_USERS_BUCKET_NAME}/{model_key}"
         logger.info("Model path resolved → %s", model_uri)
         
-        dataset_cfg = _get_dataset_config(dataset)
-        
         with timed("Load Keras model from S3"):
             loaded_model = _load_model(dataset, model_uri, dataset_cfg)
-        
-        with timed("Load dataset"):
-            dataset_obj = _load_dataset(dataset)
-        
-        # Use ORIGINAL WordNet labels (folder names) throughout processing
-        labels = dataset_obj.directory_labels if dataset == DatasetsEnum.IMAGENET.value else dataset_obj.labels
-        
-        logger.info("Dataset loaded – %d samples, %d labels", iterable_length(dataset_obj) or -1, len(labels))
-        
+
         # Create NMA with WordNet folder names
         nma = NMA(
             loaded_model.model,
@@ -195,24 +191,17 @@ def _create_nma(
         create_logistic_regression_detector(
             model_id=model_id,
             graph_type=graph_type,
-            user_id=user_id
+            user_id=user_id,
+            clean_images=None,
+            adversarial_images=None,
         )
         
         # Update metadata
         with timed("Update current_model metadata"):
-            update_current_model(
-                user_id,
-                model_id,
-                graph_type,
-                os.path.basename(model_key),
-                dataset,
-                min_confidence,
-                top_k,
-            )
-
             update_job_status(user_id, model_id, "succeeded")
 
-        send_email_notification(user_id, model_id, graph_type)
+
+        send_email_notification(user_id, model_id, graph_type, "succeeded")
 
         logger.info("🎉 create_nma completed in %.2fs", time.perf_counter() - t_global)
         return init_json
@@ -220,6 +209,7 @@ def _create_nma(
     except Exception:
         logger.exception("create_nma failed")
         update_job_status(user_id, model_id, "failed")
+        send_email_notification(user_id, model_id, graph_type, "failed")
 
         raise
 

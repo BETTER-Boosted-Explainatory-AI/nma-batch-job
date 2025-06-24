@@ -14,7 +14,7 @@ import tensorflow as tf
 import logging
 from NMA.classes.model import Model
 from NMA.classes.dendrogram import Dendrogram
-from ..utilss.photos_utils import preprocess_loaded_image
+# from ..utilss.photos_utils import preprocess_loaded_image
 from NMA.services.dataset_service import get_dataset_labels
 # from fastapi import HTTPException, status
 import json
@@ -338,43 +338,12 @@ def query_model(top_label, model_id, graph_type, user):
     
     return consistency
     
- 
-
 # ### S3 implementation ### 
-def query_predictions(model_id, graph_type, image, user):
-    """Query predictions using model from S3"""
-    model_info = get_user_models_info(user, model_id)
-    if model_info is None:
-        raise ValueError(f"Model ID {model_id} not found in models.json")
-    else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-
-    dataset = model_info["dataset"]
-    labels = get_dataset_labels(dataset)
-    model_s3_key = model_files["model_file"]
-    
-    if s3_file_exists(S3_BUCKET, model_s3_key):
-        # Load model from S3
-        current_model = load_model_from_s3(S3_BUCKET, model_s3_key)
-        logger.debug(f"Model loaded successfully from 's3://{S3_BUCKET}/{model_s3_key}'.")
-    else:
-        raise ValueError(f"Model file s3://{S3_BUCKET}/{model_s3_key} does not exist")
-    
-    preprocessed_image = preprocess_loaded_image(current_model, image)
-    predictions = get_top_k_predictions(current_model, preprocessed_image, labels)
-    top_label = predictions[0][0]  # Top label
-    top_3_predictions = predictions[:3]  # Top 3 predictions
-    
-    return top_label, top_3_predictions
-
-
-
-# ### S3 implementation ### 
-def get_user_models_info(user, model_id):
+def get_user_models_info(user_id, model_id):
     """Get model info from models.json in S3"""
     # Assuming user object has a method to get the models.json path in S3
     # If not, we'll need to construct it
-    s3_models_json_key = f"{user.get_user_folder()}.json"
+    s3_models_json_key = f"{user_id}/models.json"
     
     if s3_file_exists(S3_BUCKET, s3_models_json_key):
         models_data = read_json_from_s3(S3_BUCKET, s3_models_json_key)

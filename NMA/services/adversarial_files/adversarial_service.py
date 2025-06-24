@@ -1,6 +1,6 @@
-from services.adversarial_files.adversarial_dataset import AdversarialDataset
-from services.adversarial_files.adversarial_detector import AdversarialDetector
-from services.model_service import get_user_models_info, get_model_files
+from NMA.services.adversarial_files.adversarial_dataset import AdversarialDataset
+from NMA.services.adversarial_files.adversarial_detector import AdversarialDetector
+from NMA.services.model_service import get_user_models_info, get_model_files
 import logging
 logger = logging.getLogger(__name__)
 

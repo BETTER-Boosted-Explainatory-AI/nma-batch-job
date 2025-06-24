@@ -1,8 +1,8 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
-from services.adversarial_files.score_calculator import ScoreCalculator
+from NMA.services.adversarial_files.score_calculator import ScoreCalculator
 # from ..utilss.files_utils import load_numpy_from_directory
-from services.dataset_service import get_dataset_labels
+from NMA.services.dataset_service import get_dataset_labels
 from NMA.s3_connector.s3_dataset_utils import load_dataset_numpy
 from NMA.utilss.files_utils import preprocess_numpy_image
 import tensorflow as tf

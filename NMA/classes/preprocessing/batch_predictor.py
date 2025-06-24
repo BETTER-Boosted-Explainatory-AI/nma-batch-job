@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
-from keras.applications.resnet50 import preprocess_input
+# from keras.applications.resnet50 import preprocess_input
+from NMA.utilss.photos_utils import get_cached_preprocess_function
 from tensorflow.keras.layers import UpSampling2D
 
 
@@ -35,9 +36,9 @@ class BatchPredictor:
             X = tf.image.resize(X, (224, 224))
             
         #################
-        X = preprocess_input(X)           
+        preprocess_input = get_cached_preprocess_function(self.model)
+        X = preprocess_input(X)
 
-        
         batch_preds = self.model.predict(np.array(X), verbose=0)
         batch_results = []
         for pred in batch_preds:

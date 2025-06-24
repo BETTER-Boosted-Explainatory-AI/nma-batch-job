@@ -2,14 +2,19 @@ import boto3
 import os
 import uuid
 
-def send_email_notification(user_id, model_name, graph_type):
+def send_email_notification(user_id, model_name, graph_type, status="succeeded"):
     batch = boto3.client('batch', region_name=os.getenv("AWS_REGION"),
                         aws_access_key_id = os.getenv("AWS_JOBS_ACCESS_KEY_ID"),
                         aws_secret_access_key = os.getenv("AWS_JOBS_SECRET_ACCESS_KEY")) 
     
     job_name = f"ses-job-{uuid.uuid4()}"
     job_queue = os.getenv("JOB_QUEUE_NAME")
-    job_definition = os.getenv("JOB_DEFINITION_NAME")
+
+    if status == "succeeded":
+        job_definition = os.getenv("JOB_DEFINITION_NAME")
+    else:
+        job_definition = os.getenv("FAILURE_JOB_DEFINITION_NAME")
+
 
     environment = [
         {'name': 'user_id', 'value': str(user_id)},
