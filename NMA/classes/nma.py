@@ -49,7 +49,6 @@ class NMA:
         self.labels = labels
         self.edges_df = None
         self.Z = None
-        self.uf = None
         
         from ..utilss.s3_utils import get_users_s3_client, get_datasets_s3_client
         self.users_s3_client = get_users_s3_client()
