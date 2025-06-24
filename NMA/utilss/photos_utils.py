@@ -21,7 +21,6 @@ def get_preprocess_function(model):
         "xception": xception_preprocess,
     }
 
-    # Check the model's configuration for a match
     model_config = model.get_config()
     if "name" in model_config:
         model_name = model_config["name"].lower()
@@ -39,63 +38,24 @@ def get_preprocess_function(model):
                 print(f"Detected model type: {model_name}")
                 return preprocess_map[model_name]
 
-    # If no matching model type is found, use generic normalization
     print("No supported model type found in the configuration. Falling back to generic normalization.")
     return lambda x: x / 255.0  # Generic normalization to [0, 1]
 
 
-# Cached preprocessing function
 _cached_preprocess_function = {}
 
 def get_cached_preprocess_function(model):
-    """
-    Get the cached preprocessing function for the given model.
-    If not cached, fetch it and store it in the cache.
-    """
     global _cached_preprocess_function
-    model_id = id(model)  # Use the model's unique ID as the cache key
+    model_id = id(model)  
     if model_id not in _cached_preprocess_function:
         _cached_preprocess_function[model_id] = get_preprocess_function(model)
     return _cached_preprocess_function[model_id]
 
-# def preprocess_loaded_image(model, image):
-#     expected_shape = model.input_shape
-#     input_height, input_width = expected_shape[1], expected_shape[2]
-#     pil_image = Image.open(io.BytesIO(image)).convert("RGB")
-#     pil_image = pil_image.resize((input_width, input_height))
-#     preprocess_input = get_cached_preprocess_function(model)
-#     image_array = preprocess_input(np.array(pil_image))
-#     image_preprocessed = np.expand_dims(image_array, axis=0)
-#     return image_preprocessed
-
-# def preprocess_image(model, image):
-#     preprocess_input = get_cached_preprocess_function(model)
-#     image_array = preprocess_input(np.array(image))
-#     image_preprocessed = np.expand_dims(image_array, axis=0)
-#     return image_preprocessed
-
-# def preprocess_deepfool_image(model, image):
-#     expected_shape = model.input_shape
-#     input_height, input_width = expected_shape[1], expected_shape[2]
-#     pil_image = Image.open(io.BytesIO(image)).convert("RGB")
-#     pil_image = pil_image.resize((input_width, input_height))
-#     img = tf.keras.preprocessing.image.img_to_array(pil_image)
-#     norm_image = np.array(img)
-#     norm_image = norm_image / 255.0
-#     return np.expand_dims(norm_image, axis=0)
-
 def preprocess_numpy_image(model, image):
-    """
-    Preprocess a NumPy array image for the given model.
-    """
     if image.ndim == 3:
-        # If the image is 3D, add a batch dimension
         image = np.expand_dims(image, axis=0)
 
-    # Get the appropriate preprocessing function for the model
     preprocess_input = get_cached_preprocess_function(model)
-
-    # Apply the preprocessing function
     image_preprocessed = preprocess_input(image)
 
     return image_preprocessed
