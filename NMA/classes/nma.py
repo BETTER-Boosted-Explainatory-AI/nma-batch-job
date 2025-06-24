@@ -132,7 +132,6 @@ class NMA:
                         batch_images, self.labels, self.top_k, self.graph_threshold
                     )
                     
-                    added_labels = []
                     for j, top_predictions in enumerate(top_predictions_batch):
                         current_label = true_labels[j]
                         original_index = original_dataset_positions[j]
@@ -168,14 +167,12 @@ class NMA:
                                     )
                                     if edge_data is not None:                                        
                                         edges_data.append(edge_data)
-                                        added_labels.append(pred_label)
                                                                                 
-                        if self.graph_type == "dissimilarity":
+                        if self.graph_type == GraphTypes.DISSIMILARITY.value:
                             for label in self.labels:
-                                # if label != current_label:
-                                if label not in seen_labels_for_image:                                
+                                if label not in seen_labels_for_image and label != current_label:
                                     builder.add_infinity_edges(
-                                        graph, added_labels, label, current_label
+                                        graph, label, current_label
                                     )
                 
                     batch_images = []

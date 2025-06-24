@@ -33,16 +33,15 @@ class GraphBuilder:
         }
         return edge_data
     
-    def add_infinity_edges(self, graph, infinity_edges_labels, label, source_label):
-        if label == source_label:
+    def add_infinity_edges(self, graph, source_label, target_label):
+        if target_label == source_label:
             return
-
-        if label not in infinity_edges_labels:
-            if graph.are_adjacent(source_label, label):
-                edge_id = graph.get_eid(source_label, label)
-                graph.es[edge_id]["weight"] += self.infinity
-            else:
-                graph.add_edge(source_label, label, weight=self.infinity) 
+        
+        if graph.are_adjacent(source_label, target_label):
+            edge_id = graph.get_eid(source_label, target_label)
+            graph.es[edge_id]["weight"] += self.infinity
+        else:
+            graph.add_edge(source_label, target_label, weight=self.infinity) 
 
 
 
