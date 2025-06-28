@@ -1,23 +1,13 @@
 from dotenv import load_dotenv
 load_dotenv()
 import os
-# import numpy as np
-# import zipfile
-# import io
-# import boto3
 from botocore.exceptions import ClientError
-# from contextlib import contextmanager
 from typing import Dict, Any, Optional
 import tensorflow as tf 
 import logging
 from NMA.classes.model import Model
-from NMA.classes.dendrogram import Dendrogram
-# from ..utilss.photos_utils import preprocess_loaded_image
-# from NMA.services.dataset_service import _get_dataset_labels
 import json
 from NMA.utilss.enums.datasets_enum import DatasetsEnum
-# import shutil
-# import time
 import tempfile
 from NMA.utilss.s3_utils import get_users_s3_client
 logger = logging.getLogger(__name__)
@@ -25,19 +15,6 @@ S3_BUCKET = os.getenv("S3_USERS_BUCKET_NAME")
 if not S3_BUCKET:
     raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
 
-
-# def get_top_k_predictions(model, image, class_names, top_k=5):
-#     predictions = model.predict(image)
-#     if len(predictions.shape) == 2:
-#         predictions = predictions[0]  # Extract the first (and only) batch
-#     top_indices = np.argsort(predictions)[-top_k:][::-1]
-#     top_probs = predictions[top_indices]
-#     top_labels = [class_names[i] for i in top_indices]
-#     logger.debug(f"Top {top_k} predictions: {list(zip(top_labels, top_probs))}")
-#     return list(zip(top_labels, top_probs))
-
-# def get_model():
-#     return None
 
 def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     if user_id is None:
@@ -55,10 +32,6 @@ def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[
         raise ValueError("Could not find model directory")
     return model_path
 
-    
-# def delete_model():
-#     return None
-
 
 def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
     s3_client = get_users_s3_client()
@@ -70,6 +43,9 @@ def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
             MaxKeys=1 
         )
 
+        print(f"Checking S3 prefix: {s3_prefix} in bucket: {S3_BUCKET}")
+        print("object list response: ",response)
+
         if 'Contents' in response:
             return s3_prefix
         else:
@@ -79,7 +55,6 @@ def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
         logger.error(f"Error checking S3 prefix {s3_prefix}: {e}")
         return None
     
-
 
 def _get_model_filename(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     model_path = _get_model_path(user_id, model_id)
@@ -172,58 +147,6 @@ def load_model_from_s3(bucket_name: str, s3_key: str):
         except Exception as e:
             logger.error(f"Error loading model from S3 ({bucket}/{key}): {str(e)}")
             raise
-
-# def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
-#     logger.info(f"Loading model {model_path} for dataset {dataset_config['dataset']}")
-#     if model_path.startswith('s3://'):
-#         bucket_name = model_path.replace('s3://', '').split('/')[0]
-#         s3_key = '/'.join(model_path.replace('s3://', '').split('/')[1:])
-#     else:
-#         bucket_name = S3_BUCKET
-#         s3_key = model_path
-
-#     if not s3_file_exists(bucket_name, s3_key):
-#         raise FileNotFoundError(f'Model {bucket_name}/{s3_key} does not exist')
-#     resnet_model = load_model_from_s3(bucket_name, s3_key)
-    
-#     return Model(
-#         resnet_model, 
-#         dataset_config["top_k"], 
-#         dataset_config["min_confidence"],
-#         f"S3://{bucket_name}/{s3_key}", 
-#         dataset_config["dataset"]
-#     )
-    
-    
-
-# def query_model(top_label, model_id, graph_type, user):
-#     """Query model using dendrogram from S3 without local disk usage"""
-#     model_info = get_user_models_info(user, model_id)
-#     if model_info is None:
-#         raise ValueError(f"Model ID {model_id} not found in models.json")
-#     else:
-#         model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-#         model_path = model_files["model_graph_folder"]
-#         dendrogram_s3_key = f'{model_path}/dendrogram'
-#     s3_client =  get_users_s3_client() 
-    
-#     s3_params = {
-#         "s3_client": s3_client,
-#         "s3_bucket": S3_BUCKET,
-#         "s3_key_prefix": dendrogram_s3_key
-#     }
-    
-#     dendrogram = Dendrogram(dendrogram_s3_key)
-#     dendrogram.load_dendrogram()
-    
-#     consistency = dendrogram.find_name_hierarchy(dendrogram.Z_tree_format, top_label)
-#     if consistency is None:
-#         raise ValueError(f"Label {top_label} not found in dendrogram")
-#     else:
-#         logger.debug(f"Top label: {top_label}")
-#         logger.debug(f"Consistency: {consistency}")
-    
-#     return consistency
     
 # # ### S3 implementation ### 
 def get_user_models_info(user_id, model_id):

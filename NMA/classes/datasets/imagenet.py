@@ -84,7 +84,7 @@ class ImageNet(Dataset):
         return images, labels
 
     def load(self, name):
-        dataset_path = os.path.join("data", "datasets", name)
+        dataset_path = os.path.join("NMA","data", "datasets", name)
         train_path = os.path.join(dataset_path, "train")
         test_path = os.path.join(dataset_path, "test")
 

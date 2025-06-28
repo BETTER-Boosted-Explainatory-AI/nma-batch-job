@@ -80,7 +80,6 @@ class NMA:
             
             predictor = BatchPredictor(self.model, batch_size)
             builder = GraphBuilder(self.graph_type, self.infinity)
-            count = 0
             
             for i, image in enumerate(X):
                 source_label = y[i]
@@ -110,10 +109,6 @@ class NMA:
 
                             if filtered_predictions[0][1] != current_label:
                                 continue
-
-                            if count < 10:
-                                print(filtered_predictions)
-                                count = count + 1
                             
                             for _, pred_label, pred_prob in filtered_predictions:
                                 if pred_label not in self.labels:
