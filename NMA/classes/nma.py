@@ -110,8 +110,12 @@ class NMA:
                 X = dataset_class.x_train
                 y = dataset_class.y_train
             
+            logger.info(f"Dataset loaded: {len(X)} images, {len(y)} labels")
+            logger.info(f"Labels count: {len(self.labels)}")
+            
             graph = Graph(directed=False)
             graph.add_vertices(self.labels)
+            logger.info(f"Created graph with {len(self.labels)} vertices")
             
             edges_data = []
             batch_images = []
@@ -121,6 +125,8 @@ class NMA:
             predictor = BatchPredictor(self.model)
             builder = GraphBuilder(self.graph_type, self.infinity)
             
+            logger.info(f"Starting to process {len(X)} images with batch_size={batch_size}")
+            
             for i, image in enumerate(X):
                 source_label = y[i]
                 
@@ -129,9 +135,16 @@ class NMA:
                 original_dataset_positions.append(i)
                 
                 if len(batch_images) == predictor.batch_size or i == len(X) - 1:
-                    top_predictions_batch = predictor.get_top_predictions(
-                        batch_images, self.labels, self.top_k, self.graph_threshold
-                    )
+                    logger.debug(f"Processing batch {i//batch_size + 1}, images {len(batch_images)}")
+                    
+                    try:
+                        top_predictions_batch = predictor.get_top_predictions(
+                            batch_images, self.labels, self.top_k, self.graph_threshold
+                        )
+                        logger.debug(f"Got predictions for batch: {len(top_predictions_batch)} results")
+                    except Exception as e:
+                        logger.error(f"Error getting predictions for batch: {e}")
+                        top_predictions_batch = [[] for _ in range(len(batch_images))]
                     
                     added_labels = []
                     for j, top_predictions in enumerate(top_predictions_batch):
@@ -140,11 +153,11 @@ class NMA:
                         seen_labels_for_image = {current_label}
                         
                         if len(top_predictions) == 0:
-                            print("Empty predictions for image", original_index)
+                            logger.debug(f"Empty predictions for image {original_index}")
                             continue
                         
                         if len(top_predictions[0]) < 2:
-                            print("Malformed predictions for image", original_index)
+                            logger.debug(f"Malformed predictions for image {original_index}")
                             continue
                         
                         if top_predictions[0][1] != current_label:
@@ -157,27 +170,33 @@ class NMA:
                                                         
                             for _, pred_label, pred_prob in filtered_predictions:
                                 if pred_label not in self.labels:
-                                    print(f"Prediction label '{pred_label}' not in graph labels.")
+                                    logger.debug(f"Prediction label '{pred_label}' not in graph labels.")
                                     continue
                                 
                                 seen_labels_for_image.add(pred_label)
     
                                 if current_label != pred_label:
-                                    edge_data = builder.update_graph(
-                                        # graph, current_label, pred_label, pred_prob, i, dataset_class
-                                        graph, current_label, pred_label, pred_prob, original_index, dataset_class
-                                    )
-                                    if edge_data is not None:                                        
-                                        edges_data.append(edge_data)
-                                        added_labels.append(pred_label)
+                                    try:
+                                        edge_data = builder.update_graph(
+                                            # graph, current_label, pred_label, pred_prob, i, dataset_class
+                                            graph, current_label, pred_label, pred_prob, original_index, dataset_class
+                                        )
+                                        if edge_data is not None:                                        
+                                            edges_data.append(edge_data)
+                                            added_labels.append(pred_label)
+                                    except Exception as e:
+                                        logger.error(f"Error updating graph for edge {current_label} -> {pred_label}: {e}")
                                                                                 
                         if self.graph_type == "dissimilarity":
                             for label in self.labels:
                                 # if label != current_label:
                                 if label not in seen_labels_for_image:                                
-                                    builder.add_infinity_edges(
-                                        graph, added_labels, label, current_label
-                                    )
+                                    try:
+                                        builder.add_infinity_edges(
+                                            graph, added_labels, label, current_label
+                                        )
+                                    except Exception as e:
+                                        logger.error(f"Error adding infinity edges: {e}")
                 
                     batch_images = []
                     true_labels = []
@@ -185,19 +204,22 @@ class NMA:
                     
                 # Log progress every 10 batches
                 if (i // batch_size + 1) % 10 == 0:
-                    logger.info(f"Processed {i+1}/{len(X)} images")
+                    logger.info(f"Processed {i+1}/{len(X)} images, edges so far: {len(edges_data)}")
     
         except Exception as e:
-            print(f'Error while preprocessing model: {str(e)}')
+            logger.error(f'Error while preprocessing model: {str(e)}')
             raise
             
         try:
             if self.save_connections:
                 self.edges_df = pd.DataFrame(edges_data)
+                logger.info(f"Created edges dataframe with {len(edges_data)} edges")
 
             print("self.save_connections", self.save_connections)
             
             self.TBD_graph = graph
+            logger.info(f"Final graph has {graph.vcount()} vertices and {graph.ecount()} edges")
+            
             heap_processor = HeapProcessor(self.TBD_graph, self.graph_type, self.labels)
             self.heap_processor = heap_processor
             
@@ -210,7 +232,7 @@ class NMA:
             logger.info("Preprocessing completed successfully")
                   
         except Exception as e:
-            print(f'Error while preprocessing model 2: {str(e)}')
+            logger.error(f'Error while preprocessing model 2: {str(e)}')
             raise
 
     def get_neighbors_by_label_name(self, label_name):

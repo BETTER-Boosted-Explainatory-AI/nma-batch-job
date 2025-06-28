@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import boto3
 import os
-from ..utilss.s3_utils import get_users_s3_client 
+from NMA.utilss.s3_utils import get_users_s3_client 
 
 class ScoreCalculator: 
     def __init__(self, Z_filename, class_names):
@@ -29,6 +29,9 @@ class ScoreCalculator:
 
 
     def count_ancestors_to_lca(self, label1, label2):
+        if self.Z_full is None:
+            raise ValueError("Z matrix not loaded properly")
+            
         if isinstance(label1, str):
             idx1 = self.class_names.index(label1)
         else:

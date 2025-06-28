@@ -12,14 +12,14 @@ import tensorflow as tf
 import logging
 from NMA.classes.model import Model
 from NMA.classes.dendrogram import Dendrogram
-from ..utilss.photos_utils import preprocess_loaded_image
+from NMA.utilss.photos_utils import preprocess_loaded_image
 from NMA.services.dataset_service import get_dataset_labels
 import json
-from ..utilss.enums.datasets_enum import DatasetsEnum
+from NMA.utilss.enums.datasets_enum import DatasetsEnum
 import shutil
 import time
 import tempfile
-from ..utilss.s3_utils import get_users_s3_client
+from NMA.utilss.s3_utils import get_users_s3_client
 logger = logging.getLogger(__name__)
 S3_BUCKET = os.getenv("S3_USERS_BUCKET_NAME")
 if not S3_BUCKET:

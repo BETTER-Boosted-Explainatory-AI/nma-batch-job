@@ -1,10 +1,10 @@
-from services.adversarial_files.adversarial_dataset import AdversarialDataset
-from services.adversarial_files.adversarial_detector import AdversarialDetector
-from services.model_service import get_user_models_info, get_model_files
+from NMA.services.adversarial_files.adversarial_dataset import AdversarialDataset
+from NMA.services.adversarial_files.adversarial_detector import AdversarialDetector
+from NMA.services.model_service import get_user_models_info, get_model_files
 import logging
 logger = logging.getLogger(__name__)
 
-def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> AdversarialDataset:
+def _create_adversarial_dataset(Z_file, clean_images, adversarial_images, model_filename, dataset) -> dict:
     logger.info("Creating adversarial dataset")
     adversarial_dataset = AdversarialDataset(Z_file, clean_images, adversarial_images, model_filename, dataset)
     X_train, y_train, X_test, y_test = adversarial_dataset.create_logistic_regression_dataset()

@@ -13,7 +13,7 @@ from NMA.services.dataset_service import _get_dataset_config, _load_dataset
 from NMA.services.model_service import _get_model_filename, _load_model
 from NMA.services.adversarial_files.adversarial_service import create_logistic_regression_detector
 from NMA.services.ses_batch_service import send_email_notification
-from ..utilss.files_utils import update_current_model, update_job_status
+from ..utilss.files_utils import update_current_model
 from ..utilss.s3_utils import  get_users_s3_client
 sys.setrecursionlimit(10_000)  
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()  
@@ -74,8 +74,6 @@ def _create_nma(
     logger.info("🏁 create_nma(): user=%s, model=%s, graph_type=%s, dataset=%s",
                 user_id, model_id, graph_type, dataset)
     
-    update_job_status(user_id, model_id, "running")
-
     try:
         model_key = _get_model_filename(user_id, model_id, graph_type)
         if not model_key:
@@ -143,6 +141,8 @@ def _create_nma(
         create_logistic_regression_detector(
             model_id=model_id,
             graph_type=graph_type,
+            clean_images=None,
+            adversarial_images=None,
             user_id=user_id
         )
         
@@ -157,8 +157,6 @@ def _create_nma(
                 top_k,
             )
 
-            update_job_status(user_id, model_id, "succeeded")
-
         send_email_notification(user_id, model_id, graph_type)
 
         logger.info("🎉 create_nma completed in %.2fs", time.perf_counter() - t_global)
@@ -166,7 +164,6 @@ def _create_nma(
 
     except Exception:
         logger.exception("create_nma failed")
-        update_job_status(user_id, model_id, "failed")
 
         raise
 
