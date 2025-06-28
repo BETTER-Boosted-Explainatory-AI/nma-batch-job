@@ -1,43 +1,43 @@
 from dotenv import load_dotenv
 load_dotenv()
 import os
-import numpy as np
-import zipfile
-import io
-import boto3
+# import numpy as np
+# import zipfile
+# import io
+# import boto3
 from botocore.exceptions import ClientError
-from contextlib import contextmanager
+# from contextlib import contextmanager
 from typing import Dict, Any, Optional
 import tensorflow as tf 
 import logging
 from NMA.classes.model import Model
 from NMA.classes.dendrogram import Dendrogram
 # from ..utilss.photos_utils import preprocess_loaded_image
-from NMA.services.dataset_service import get_dataset_labels
+# from NMA.services.dataset_service import _get_dataset_labels
 import json
-from ..utilss.enums.datasets_enum import DatasetsEnum
-import shutil
-import time
+from NMA.utilss.enums.datasets_enum import DatasetsEnum
+# import shutil
+# import time
 import tempfile
-from ..utilss.s3_utils import get_users_s3_client
+from NMA.utilss.s3_utils import get_users_s3_client
 logger = logging.getLogger(__name__)
 S3_BUCKET = os.getenv("S3_USERS_BUCKET_NAME")
 if not S3_BUCKET:
     raise ValueError("S3_USERS_BUCKET_NAME environment variable is required")
 
 
-def get_top_k_predictions(model, image, class_names, top_k=5):
-    predictions = model.predict(image)
-    if len(predictions.shape) == 2:
-        predictions = predictions[0]  # Extract the first (and only) batch
-    top_indices = np.argsort(predictions)[-top_k:][::-1]
-    top_probs = predictions[top_indices]
-    top_labels = [class_names[i] for i in top_indices]
-    logger.debug(f"Top {top_k} predictions: {list(zip(top_labels, top_probs))}")
-    return list(zip(top_labels, top_probs))
+# def get_top_k_predictions(model, image, class_names, top_k=5):
+#     predictions = model.predict(image)
+#     if len(predictions.shape) == 2:
+#         predictions = predictions[0]  # Extract the first (and only) batch
+#     top_indices = np.argsort(predictions)[-top_k:][::-1]
+#     top_probs = predictions[top_indices]
+#     top_labels = [class_names[i] for i in top_indices]
+#     logger.debug(f"Top {top_k} predictions: {list(zip(top_labels, top_probs))}")
+#     return list(zip(top_labels, top_probs))
 
-def get_model():
-    return None
+# def get_model():
+#     return None
 
 def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[str]:
     if user_id is None:
@@ -56,8 +56,8 @@ def _check_model_path(user_id: str, model_id: str, graph_type: str) -> Optional[
     return model_path
 
     
-def delete_model():
-    return None
+# def delete_model():
+#     return None
 
 
 def _get_model_path(user_id: str, model_id: str) -> Optional[str]:
@@ -166,106 +166,66 @@ def load_model_from_s3(bucket_name: str, s3_key: str):
             logger.info(f"Downloading model from S3: {bucket}/{key}")
             s3_client.download_file(bucket, key, temp_model_path)
 
-            try:
-                logger.info("Attempting to load model with custom object scope...")
-                with tf.keras.utils.custom_object_scope({'Functional': tf.keras.Model}):
-                    model = tf.keras.models.load_model(temp_model_path, compile=False)
-                logger.info("Model loaded successfully with custom object scope")
-                return model
-            except Exception as custom_error:
-                logger.warning(f"Could not load with custom object scope: {str(custom_error)}")
-                
-                if 'keras.src.models.functional' in str(custom_error):
-                    logger.warning("This model was saved with TensorFlow 2.13+ but you're using an older version")
-                    logger.warning("Attempting alternative loading approaches...")
-                    
-                    if key.lower().find('resnet50') >= 0:
-                        logger.info("Creating ResNet50 fallback model...")
-                        fallback_model = tf.keras.applications.ResNet50(weights=None)
-                        logger.info("Using ResNet50 fallback model")
-                        return fallback_model
-                    else:
-                        try:
-                            import h5py
-                            if temp_model_path.endswith(('.h5', '.keras')):
-                                logger.info("Trying to load model weights directly...")
-                                with h5py.File(temp_model_path, 'r') as h5file:
-                                    if 'model_weights' in h5file:
-                                        logger.info("Found weights file, creating compatible model...")
-                                        base_model = tf.keras.Sequential([
-                                            tf.keras.layers.InputLayer(input_shape=(224, 224, 3)),
-                                            tf.keras.applications.ResNet50(include_top=True, weights=None)
-                                        ])
-                                        base_model.load_weights(temp_model_path)
-                                        logger.info("Model weights loaded successfully")
-                                        return base_model
-                        except Exception as h5_error:
-                            logger.warning(f"Could not load weights directly: {str(h5_error)}")
-                    
-                    logger.warning("All loading attempts failed. Creating a new model as fallback.")
-                    logger.warning("Please upgrade to TensorFlow 2.13+ to properly load this model.")
-                    return 
-                
-                logger.info("Failed model loading...")
-                return model
+            model = tf.keras.models.load_model(temp_model_path)
+            return model
                 
         except Exception as e:
-            logger.error(f"Error loading model from S3 ({bucket}/{key})")
-        
+            logger.error(f"Error loading model from S3 ({bucket}/{key}): {str(e)}")
+            raise
 
-def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
-    logger.info(f"Loading model {model_path} for dataset {dataset_config['dataset']}")
-    if model_path.startswith('s3://'):
-        bucket_name = model_path.replace('s3://', '').split('/')[0]
-        s3_key = '/'.join(model_path.replace('s3://', '').split('/')[1:])
-    else:
-        bucket_name = S3_BUCKET
-        s3_key = model_path
+# def construct_model(model_path: str, dataset_config: Dict[str, Any]) -> Model:
+#     logger.info(f"Loading model {model_path} for dataset {dataset_config['dataset']}")
+#     if model_path.startswith('s3://'):
+#         bucket_name = model_path.replace('s3://', '').split('/')[0]
+#         s3_key = '/'.join(model_path.replace('s3://', '').split('/')[1:])
+#     else:
+#         bucket_name = S3_BUCKET
+#         s3_key = model_path
 
-    if not s3_file_exists(bucket_name, s3_key):
-        raise FileNotFoundError(f'Model {bucket_name}/{s3_key} does not exist')
-    resnet_model = load_model_from_s3(bucket_name, s3_key)
+#     if not s3_file_exists(bucket_name, s3_key):
+#         raise FileNotFoundError(f'Model {bucket_name}/{s3_key} does not exist')
+#     resnet_model = load_model_from_s3(bucket_name, s3_key)
     
-    return Model(
-        resnet_model, 
-        dataset_config["top_k"], 
-        dataset_config["min_confidence"],
-        f"S3://{bucket_name}/{s3_key}", 
-        dataset_config["dataset"]
-    )
+#     return Model(
+#         resnet_model, 
+#         dataset_config["top_k"], 
+#         dataset_config["min_confidence"],
+#         f"S3://{bucket_name}/{s3_key}", 
+#         dataset_config["dataset"]
+#     )
     
     
 
-def query_model(top_label, model_id, graph_type, user):
-    """Query model using dendrogram from S3 without local disk usage"""
-    model_info = get_user_models_info(user, model_id)
-    if model_info is None:
-        raise ValueError(f"Model ID {model_id} not found in models.json")
-    else:
-        model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
-        model_path = model_files["model_graph_folder"]
-        dendrogram_s3_key = f'{model_path}/dendrogram'
-    s3_client =  get_users_s3_client() 
+# def query_model(top_label, model_id, graph_type, user):
+#     """Query model using dendrogram from S3 without local disk usage"""
+#     model_info = get_user_models_info(user, model_id)
+#     if model_info is None:
+#         raise ValueError(f"Model ID {model_id} not found in models.json")
+#     else:
+#         model_files = get_model_files(user.get_user_folder(), model_info, graph_type)
+#         model_path = model_files["model_graph_folder"]
+#         dendrogram_s3_key = f'{model_path}/dendrogram'
+#     s3_client =  get_users_s3_client() 
     
-    s3_params = {
-        "s3_client": s3_client,
-        "s3_bucket": S3_BUCKET,
-        "s3_key_prefix": dendrogram_s3_key
-    }
+#     s3_params = {
+#         "s3_client": s3_client,
+#         "s3_bucket": S3_BUCKET,
+#         "s3_key_prefix": dendrogram_s3_key
+#     }
     
-    dendrogram = Dendrogram(dendrogram_s3_key)
-    dendrogram.load_dendrogram()
+#     dendrogram = Dendrogram(dendrogram_s3_key)
+#     dendrogram.load_dendrogram()
     
-    consistency = dendrogram.find_name_hierarchy(dendrogram.Z_tree_format, top_label)
-    if consistency is None:
-        raise ValueError(f"Label {top_label} not found in dendrogram")
-    else:
-        logger.debug(f"Top label: {top_label}")
-        logger.debug(f"Consistency: {consistency}")
+#     consistency = dendrogram.find_name_hierarchy(dendrogram.Z_tree_format, top_label)
+#     if consistency is None:
+#         raise ValueError(f"Label {top_label} not found in dendrogram")
+#     else:
+#         logger.debug(f"Top label: {top_label}")
+#         logger.debug(f"Consistency: {consistency}")
     
-    return consistency
+#     return consistency
     
-# ### S3 implementation ### 
+# # ### S3 implementation ### 
 def get_user_models_info(user_id, model_id):
     """Get model info from models.json in S3"""
     # Assuming user object has a method to get the models.json path in S3

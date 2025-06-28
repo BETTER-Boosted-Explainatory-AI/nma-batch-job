@@ -5,17 +5,17 @@ import logging
 from contextlib import contextmanager
 from typing import Iterable
                        
-from ..utilss.enums.graph_types import GraphTypes
-from ..utilss.enums.datasets_enum import DatasetsEnum
-from ..classes.dendrogram import Dendrogram
-from ..classes.edges_dataframe import EdgesDataframe
-from ..classes.nma import NMA
+from NMA.utilss.enums.graph_types import GraphTypes
+from NMA.utilss.enums.datasets_enum import DatasetsEnum
+from NMA.classes.dendrogram import Dendrogram
+from NMA.classes.edges_dataframe import EdgesDataframe
+from NMA.classes.nma import NMA
 from NMA.services.dataset_service import _get_dataset_config, _load_dataset
 from NMA.services.model_service import _get_model_filename, _load_model
 from NMA.services.adversarial_files.adversarial_service import create_logistic_regression_detector
 from NMA.services.ses_batch_service import send_email_notification
-from ..utilss.files_utils import update_job_status
-from ..utilss.s3_utils import  get_users_s3_client
+from NMA.utilss.files_utils import update_job_status
+from NMA.utilss.s3_utils import  get_users_s3_client
 sys.setrecursionlimit(10_000)  
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()  
 logging.basicConfig(
@@ -82,7 +82,7 @@ def _create_nma(
         dataset_cfg = _get_dataset_config(dataset)
         
         with timed("Load dataset"):
-            dataset_obj = _load_dataset(dataset)
+            dataset_obj = _load_dataset(dataset_cfg)
            
         # Use ORIGINAL WordNet labels (folder names) throughout processing
         labels = dataset_obj.directory_labels if dataset == DatasetsEnum.IMAGENET.value else dataset_obj.labels

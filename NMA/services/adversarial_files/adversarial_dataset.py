@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 import numpy as np
 from NMA.services.adversarial_files.score_calculator import ScoreCalculator
-from NMA.services.dataset_service import get_dataset_labels
+from NMA.services.dataset_service import _get_dataset_labels
 from NMA.s3_connector.s3_dataset_utils import load_dataset_numpy
 from NMA.utilss.files_utils import preprocess_numpy_image
 import tensorflow as tf
@@ -69,7 +69,7 @@ class AdversarialDataset:
 
         print(f"Loaded {len(self.clear_images)} clean images")
         print(f"Loaded {len(self.adversarial_images)} adversarial images")
-        self.labels = get_dataset_labels(dataset)
+        self.labels = _get_dataset_labels(dataset)
         if self.labels is None:
             raise ValueError(f"Info file for the dataset {dataset} not found.")      
 

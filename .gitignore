@@ -8,3 +8,4 @@ testing_shit.py
 *.log
 nltk_data/
 *.pytest_cache
+/NMA/data
