@@ -147,6 +147,16 @@ def _create_nma(
         )
         
         with timed("Update current_model metadata"):
+            update_current_model(
+                user_id,
+                model_id,
+                graph_type,
+                os.path.basename(model_key),
+                dataset,
+                min_confidence,
+                top_k,
+            )
+
             update_job_status(user_id, model_id, "succeeded")
 
         send_email_notification(user_id, model_id, graph_type)

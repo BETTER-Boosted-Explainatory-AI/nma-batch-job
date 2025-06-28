@@ -214,7 +214,7 @@ def update_current_model(user_id, model_id, graph_type, model_filename, dataset,
     model_metadata = {
         "model_id": model_id,
         "file_name": model_filename,
-        "dataset": dataset_name,
+        "dataset": dataset,
         "graph_type": graph_type,
         "min_confidence": min_confidence,
         "top_k": top_k
