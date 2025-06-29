@@ -148,8 +148,9 @@ class NMA:
             self.heap_processor = heap_processor
     
             clustering = HierarchicalClusteringBuilder(heap_processor, self.labels)
-            self.Z = ZBuilder.create_z_matrix_from_tree(clustering, self.labels)
-    
+            z_builder = ZBuilder()
+            self.Z = z_builder.create_z_matrix_from_tree(clustering, self.labels)
+
         except Exception as e:
             print(f"Error while preprocessing model: {str(e)}")
 
