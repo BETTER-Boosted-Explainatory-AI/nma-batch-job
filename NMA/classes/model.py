@@ -56,16 +56,7 @@ class Model:
             s3_client = get_users_s3_client()
             s3_client.upload_file(temp_model_path, self.s3_bucket, self.s3_key)
             logger.info(f'Model has been saved to S3: {self.model_filename}')
-      
-    def save_model(self):
-        """Save the model to S3"""
-        logger.info(f"Saving model to S3: {self.model_filename}")
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_model_path = os.path.join(temp_dir, 'model.keras')
-            self.model.save(temp_model_path)
-            s3_client = get_users_s3_client()
-            s3_client.upload_file(temp_model_path, self.s3_bucket, self.s3_key)
-            logger.info(f'Model has been saved to S3: {self.model_filename}')
+
             
     def s3_file_exists(bucket_name: str, s3_key: str) -> bool:
         """Check if a file exists in S3"""
